@@ -560,7 +560,7 @@ def spawn_worker(data: Path, text: str, settings: dict, force_full: bool = False
     """Summarize and speak in a detached process so the caller returns immediately.
     rephrase ({"previous", "note"}) asks for a clearer summary instead."""
     job = {"text": text, "settings": settings, "force_full": force_full,
-           "session": session, "label": label}
+           "session": session, "label": label, "t": time.time()}
     if rephrase is not None:
         job["rephrase"] = rephrase
     proc = subprocess.Popen(
@@ -599,6 +599,8 @@ def cmd_hook(args) -> None:
     if event.get("hook_event_name") == "UserPromptSubmit":
         # A new prompt makes the session's old summary noise. Never starts the server.
         if session_id:
+            # Workers still writing a summary check this and drop it (cmd_worker).
+            (data / f"hush-{_safe_id(session_id)}").touch()
             try:
                 request(data, "POST", "/stop", {"session": session_id}, timeout=1)
             except (OSError, http.client.HTTPException):
@@ -661,6 +663,9 @@ def cmd_worker(args) -> None:
         if not text:
             text = prepare(job["text"], settings, job.get("force_full", False),
                            data=data, session=session)
+        hush = data / f"hush-{_safe_id(session)}"
+        if hush.exists() and hush.stat().st_mtime > job.get("t", 0):
+            return  # a new prompt came in while this was prepared
         if text and (cue := CUE.match(text)):
             text = text[cue.end():]
             send_cue(*cue.groups())

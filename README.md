@@ -207,5 +207,5 @@ The client (`scripts/claude_speak.py`) is stdlib-only Python. The voice server (
 - **Barge-in**: speech stops the moment you start dictating with
   [voxtype](https://github.com/peteonrails/voxtype) (needs `state_file = "auto"` in its config).
   Point `CLAUDE_SPEAK_DICTATION_STATE` at another state file to use a different tool.
-- **Hush on new prompt**: sending a new prompt stops that session's speech, playing or queued.
+- **Hush on new prompt**: sending a new prompt stops that session's speech, whether it is playing, queued or still being summarized.
   Other sessions keep talking.
