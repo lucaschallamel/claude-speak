@@ -15,7 +15,7 @@ Exits by itself after a period with nothing to do.
   POST /speak    {"text", "voice", "speed", "session", "label"}; returns at once, plays in turn
   POST /warm     play silence to wake the output device before speech is ready
   POST /synth    same body; returns the whole utterance as a WAV
-  POST /stop     stop playback and clear the queue
+  POST /stop     stop playback and clear the queue; {"session"} stops only that session
 """
 
 from __future__ import annotations
@@ -187,15 +187,26 @@ class Speaker:
             return self.kokoro.create(text, voice=voice, speed=speed,
                                       lang=LANGS.get(voice[:1], "en-us"))
 
-    def stop(self) -> None:
-        """Stop everything: what's playing and what's queued."""
+    def stop(self, session: str = "") -> None:
+        """Stop everything: what's playing and what's queued. With a session, only its speech."""
         with self.state_lock:
+            if session:
+                self._cancel_session(session)
+                return
             for job in self.queue:
                 job.cancelled = True
             self.queue.clear()
             self._cancel_current()
             self._end_warm()
             self.busy_until = time.time()
+
+    def _cancel_session(self, session: str) -> None:
+        """Drop the session's queued speech and stop it if playing; call with state_lock held."""
+        for job in self.queue:
+            job.cancelled |= job.session == session
+        self.queue = [job for job in self.queue if not job.cancelled]
+        if self.current and self.current.session == session:
+            self._cancel_current()
 
     def _cancel_current(self) -> None:
         """Call with state_lock held."""
@@ -248,11 +259,7 @@ class Speaker:
                 self.last_seen[session] = now
             if label and others:
                 text = f"{re.sub(r'[-_.]+', ' ', label)}: {text}"
-            for job in self.queue:
-                job.cancelled |= job.session == session
-            self.queue = [job for job in self.queue if not job.cancelled]
-            if self.current and self.current.session == session:
-                self._cancel_current()
+            self._cancel_session(session)
             self.queue.append(Job(session, text, voice, speed))
             self.busy_until = now + 3600
             self.wake.notify()
@@ -347,7 +354,7 @@ class Handler(BaseHTTPRequestHandler):
             voice = str(body.get("voice") or "af_heart")
             speed = min(2.0, max(0.5, float(body.get("speed") or 1.0)))
             if self.path == "/stop":
-                speaker.stop()
+                speaker.stop(str(body.get("session") or ""))
                 self._json(200, {"ok": True})
             elif self.path == "/warm":
                 speaker.warm()

@@ -216,5 +216,29 @@ class QuestionTextTest(unittest.TestCase):
         self.assertEqual(cs.question_text({}), "")
 
 
+class PromptHushTest(TempDataTest):
+    def run_hook(self, event):
+        args = mock.Mock(data_dir=str(self.data))
+        with mock.patch.dict(os.environ, CLEAN_ENV, clear=True), \
+                mock.patch("sys.stdin", mock.Mock(read=lambda *a: json.dumps(event))), \
+                mock.patch.object(cs, "request") as request, \
+                mock.patch.object(cs, "spawn_worker") as worker:
+            cs.cmd_hook(args)
+        return request, worker
+
+    def test_new_prompt_stops_only_its_session(self):
+        request, worker = self.run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "s1"})
+        request.assert_called_once_with(self.data, "POST", "/stop", {"session": "s1"}, timeout=1)
+        worker.assert_not_called()
+
+    def test_no_server_is_fine(self):
+        with mock.patch.object(cs, "socket_path", return_value=self.data / "none.sock"):
+            args = mock.Mock(data_dir=str(self.data))
+            event = {"hook_event_name": "UserPromptSubmit", "session_id": "s1"}
+            with mock.patch.dict(os.environ, CLEAN_ENV, clear=True), \
+                    mock.patch("sys.stdin", mock.Mock(read=lambda *a: json.dumps(event))):
+                cs.cmd_hook(args)  # must not raise
+
+
 if __name__ == "__main__":
     unittest.main()

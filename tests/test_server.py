@@ -89,6 +89,16 @@ class SpeakerQueueTest(unittest.TestCase):
         self.assertEqual(sp.queue, [])
         self.assertTrue(all(j.cancelled for j in jobs))
 
+    def test_stop_with_session_leaves_other_sessions(self):
+        sp = speaker()
+        sp.current = server.Job("a", "playing", "bm_george", 1.0)
+        sp.speak("b talks", "bm_george", 1.0, session="b")
+        sp.queue.append(server.Job("a", "queued", "bm_george", 1.0))
+        sp.stop("a")
+        self.assertTrue(sp.current.cancelled)
+        self.assertEqual([j.session for j in sp.queue], ["b"])
+        self.assertFalse(sp.queue[0].cancelled)
+
     def test_unknown_voice_falls_back(self):
         sp = speaker()
         self.assertEqual(sp.resolve_voice("bm_george"), "bm_george")

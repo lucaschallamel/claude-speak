@@ -596,6 +596,14 @@ def cmd_hook(args) -> None:
     remember_transcript(data, session_id, transcript)
     if event.get("hook_event_name") == "SessionStart":
         return
+    if event.get("hook_event_name") == "UserPromptSubmit":
+        # A new prompt makes the session's old summary noise. Never starts the server.
+        if session_id:
+            try:
+                request(data, "POST", "/stop", {"session": session_id}, timeout=1)
+            except (OSError, http.client.HTTPException):
+                pass
+        return
 
     settings = load_settings(data=data)
     if not settings["auto_speak"]:
