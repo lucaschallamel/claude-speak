@@ -388,16 +388,19 @@ def watch_dictation(path: Path, stop, interval: float = 0.1) -> None:
     """Call stop() each time the dictation state turns from idle to anything else.
 
     Exact names of the busy states are not relied on; a missing file reads as idle.
+    An empty read is a write caught halfway, so it changes nothing.
     """
     was_idle = True
     while True:
         try:
-            idle = path.read_text().strip() in ("", "idle")
+            state = path.read_text().strip()
         except OSError:
-            idle = True
-        if was_idle and not idle:
-            stop()
-        was_idle = idle
+            state = "idle"
+        if state:
+            idle = state == "idle"
+            if was_idle and not idle:
+                stop()
+            was_idle = idle
         time.sleep(interval)
 
 

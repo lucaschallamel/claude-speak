@@ -113,6 +113,7 @@ class WatchDictationTest(unittest.TestCase):
         settle("idle\n")
         self.assertEqual(stops, [])
         settle("recording\n")
+        settle("")  # a write caught halfway is not idle
         settle("transcribing\n")
         self.assertEqual(len(stops), 1)
         settle("idle\n")
