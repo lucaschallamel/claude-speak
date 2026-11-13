@@ -3,10 +3,12 @@
 Run: python3 -m unittest discover tests
 """
 
+import io
 import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -215,6 +217,42 @@ class QuestionTextTest(unittest.TestCase):
     def test_empty_input(self):
         self.assertEqual(cs.question_text({}), "")
 
+
+class PromptHushTest(TempDataTest):
+    # cmd_hook skips nested and headless runs; tests may run under either.
+    ENV = {k: v for k, v in CLEAN_ENV.items()
+           if k not in ("CLAUDE_SPEAK_NESTED", "CLAUDE_CODE_ENTRYPOINT")}
+
+    def run_hook(self, event, stub_request=True):
+        args = mock.Mock(data_dir=str(self.data))
+        with mock.patch.dict(os.environ, self.ENV, clear=True), \
+                mock.patch("sys.stdin", io.StringIO(json.dumps(event))), \
+                mock.patch.object(cs, "socket_path", return_value=self.data / "none.sock"), \
+                mock.patch.object(cs, "request", wraps=None if stub_request else cs.request) as request:
+            cs.cmd_hook(args)
+        return request
+
+    def test_new_prompt_stops_only_its_session(self):
+        request = self.run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "s1"})
+        request.assert_called_once_with(self.data, "POST", "/stop", {"session": "s1"}, timeout=1)
+
+    def test_no_server_is_fine(self):
+        self.run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "s1"},
+                      stub_request=False)  # must not raise
+
+    def test_summary_finished_after_a_new_prompt_is_dropped(self):
+        job = {"text": "reply", "settings": {}, "session": "s1", "t": time.time() - 5}
+        self.run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "s1"})
+        with mock.patch("sys.stdin", io.StringIO(json.dumps(job))), \
+                mock.patch.object(cs, "server_health", return_value=None), \
+                mock.patch.object(cs, "prepare", return_value="summary"), \
+                mock.patch.object(cs, "send_to_server") as send:
+            cs.cmd_worker(mock.Mock(data_dir=str(self.data)))
+            send.assert_not_called()
+            job["t"] = time.time() + 5  # spawned after the prompt, e.g. by /speak
+            with mock.patch("sys.stdin", io.StringIO(json.dumps(job))):
+                cs.cmd_worker(mock.Mock(data_dir=str(self.data)))
+            send.assert_called_once()
 
 if __name__ == "__main__":
     unittest.main()
