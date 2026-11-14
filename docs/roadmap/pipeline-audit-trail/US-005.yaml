@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S4_CODE_REVIEW
+current_stage: S5_ARCH_SEC_COMP_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -89,10 +89,28 @@ stages:
       - 'Branch pushed to origin after the checkpoint commit'
     commit: 'c5b4be7'
   S4_CODE_REVIEW:
-    status: pending
-    status_note: 'Round 1 (below) completed 2026-11-14T16:20:46Z on c5b4be7, fixes in 67f4419. Round 2, a fresh review of the AC6 change, follows the reopened S3 (decision 16).'
-    completed_at: '2026-11-14T16:20:46Z'
-    reviewed_commit: 'c5b4be7427fc6521636505854afde3acaba7c242'
+    status: completed
+    status_note: 'Two rounds. Round 1 completed 2026-11-14T16:20:46Z on c5b4be7, fixes in 67f4419. Round 2 reviewed the AC6 change (decision 16) on 30a7662.'
+    completed_at: '2026-11-14T16:54:23Z'
+    reviewed_commit: '30a7662ac16294365caf7cd9f0e470442627f763'
+    reviewed_commit_round_1: 'c5b4be7427fc6521636505854afde3acaba7c242'
+    round_2_reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff 67f4419 30a7662 (scripts, tests, CLAUDE.md, systemPatterns), CLAUDE.md; ran the suite and a scratch experiment (old vs new split_chunks on 20,000 random inputs; per_sentence edge and loss checks); Verdict dictated: no'
+      - 'Author pass after the fresh report (1 Info finding added)'
+    round_2_evidence:
+      - 'Delegated to /cu:quality-review as a fresh-context review: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 2 low, 3 info (4 fresh, 1 author)'
+      - 'Fresh verified: default chunking identical to main on 20,000 random inputs; per_sentence loses or reorders nothing; per_sentence cannot be lost on any Job path; no piece repeated or skipped'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'R2-F1 Low mitigated by wording: pieces are "about 80" (at most 81: _pack ignores the joining space, as for replies since before the fork); AC6, decision 18, docstring, CLAUDE.md reworded; _pack itself unchanged so reply chunking stays byte-for-byte'
+      - 'R2-F2 Low fixed: negative assertion, a status line stored after 1 of 3 pieces is not kept'
+      - 'R2-F3 Info fixed: per_sentence also splits long sentences at semicolons (not colons, so a project-name label is never a piece alone); new test'
+      - 'R2-F4 Info no change: a long sentence with no comma or semicolon stays whole (documented, tested)'
+      - 'R2-F5 Info (author) deferred to S6 by design: player launch gaps between pieces may sound choppy; judged by ear at the hands-on (decision 13); if choppy, raise CLAUSE_CHARS and re-measure'
+      - 'Mutation checks: _remember without per_sentence, and the split without semicolons: each failed its test; server.py restored from a scratchpad backup (cmp identical)'
+      - 'Measured status line still splits [22, 47, 74, 27] (no semicolons), so the AC1 and AC6 measurements stand'
+      - 'After fixes: 104 passed with numpy; numpy blocked passed with 8 skipped; ruff clean; issue #5 comment 6881019362'
+    round_1_completed_at: '2026-11-14T16:20:46Z'
     reviewers:
       - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff main...c5b4be7, CLAUDE.md; ran the test suite and one scratch experiment (fake player); Verdict dictated: no'
       - 'Author pass after the fresh report (1 Info finding added)'

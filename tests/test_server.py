@@ -66,6 +66,16 @@ class SplitChunksTest(unittest.TestCase):
             self.assertLessEqual(len(chunk), server.CLAUSE_CHARS)
         self.assertEqual(server.split_chunks("x" * 100 + ".", True), ["x" * 100 + "."])  # no comma
 
+    def test_per_sentence_splits_a_long_sentence_at_semicolons_not_colons(self):
+        clause = "reading the server code and its tests"
+        long = "; ".join([clause] * 4) + "."
+        chunks = server.split_chunks(f"claude speak: {long}", per_sentence=True)
+        self.assertEqual(" ".join(chunks), f"claude speak: {long}")
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(chunks[0].startswith("claude speak: "))  # a label is never a piece alone
+        for chunk in chunks:
+            self.assertLessEqual(len(chunk), server.CLAUSE_CHARS + 1)  # _pack's joining space
+
 
 def speaker() -> "server.Speaker":
     """A Speaker with queue state only: no Kokoro, player or playback thread."""
@@ -508,6 +518,8 @@ class LanesTest(unittest.TestCase):
         sp.synth = mock.Mock(side_effect=lambda chunk, *_: (chunk, 24000))
         # The made first sentence plays as is; only the two others are synthesised.
         self.assertEqual([c for c, _ in sp._audio(job)], ["s1", "Then the tests.", "Then the docs."])
+        sp._remember(job, ["s1"], 24000)
+        self.assertNotIn("a", sp.clips)  # stopped after one of three pieces: not whole, not kept
         sp._remember(job, ["s1", "s2", "s3"], 24000)
         self.assertIn("a", sp.clips)  # three sentence chunks make the whole utterance
 

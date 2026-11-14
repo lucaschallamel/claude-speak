@@ -158,12 +158,13 @@ def _pack(parts, limit: int) -> list[str]:
 
 
 def split_chunks(text: str, per_sentence: bool = False) -> list[str]:
-    """Chunks of up to CHUNK_CHARS made of whole sentences. per_sentence (status lines): one
-    sentence each, a long one split at commas into CLAUSE_CHARS pieces, so speech that cuts
-    a status line waits for one short piece's synthesis."""
+    """Chunks of about CHUNK_CHARS made of whole sentences. per_sentence (status lines): one
+    sentence each, a long one split at commas and semicolons into pieces of about
+    CLAUSE_CHARS, so speech that cuts a status line waits for one short piece's synthesis.
+    (_pack ignores the joining space, so a chunk can be one character over.)"""
     if per_sentence:
         sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
-        return [c for s in sentences for c in _pack(re.split(r"(?<=,)\s+", s), CLAUSE_CHARS)]
+        return [c for s in sentences for c in _pack(re.split(r"(?<=[,;])\s+", s), CLAUSE_CHARS)]
     return _pack(re.split(r"(?<=[.!?;:])\s+|\n+", text.strip()), CHUNK_CHARS)
 
 
