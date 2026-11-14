@@ -20,6 +20,7 @@ roadmap/
 ├── backlog/                  # one story file per GitHub issue (US-, SP-)
 └── pipeline-audit-trail/     # /cu:pipe records, one per story run
     ├── US-004.yaml           # stage-by-stage state and evidence (S0-S10)
+    ├── trust-boundary-paths.json  # entry points S5 checks (read from main)
     └── artifacts/            # stage deliverables: <ID>-s1-kickoff.md, <ID>-s2-plan.md, ...
 ```
 
