@@ -35,6 +35,9 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
   (`_enqueue`) instead of appending, drops a status line that would replace its session's question
   or reply, and preempts another session's lower-lane speech (`_preempt_for`). `_loop` picks jobs
   through `_next`, which drops stale status lines.
+- `split_chunks` in `scripts/server.py` (US-005): the packing loop moved into `_pack`, and a
+  `per_sentence` mode (status lines: one sentence, long ones split at commas) was added. Default
+  output is unchanged, covered by `SplitChunksTest`.
 - `Server.__init__` in `scripts/server.py` (US-004): binds the socket under umask `0o177`, so only
   the user can connect even when it falls back to a shared `/tmp`.
 

@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S3_EXECUTE
+current_stage: S4_CODE_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -53,7 +53,21 @@ stages:
       - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
     commit: ''
   S3_EXECUTE:
-    status: in_progress
+    status: completed
+    round_2_completed_at: '2026-11-14T16:46:15Z'
+    round_2_evidence:
+      - 'Code: split_chunks(per_sentence) with a shared _pack helper; CLAUSE_CHARS = 80; Job.per_sentence set for the low lane and kept by _resumed and the replay restart; _remember and _audio split by the job''s mode'
+      - 'Why per_sentence is a Job field, not the lane: a replay has priority -1, so a lane-derived split would re-chunk a replayed status line and skip a sentence'
+      - 'Tests: 4 new (per-sentence split, comma split with nothing lost, low vs normal synthesis chunks, replay/resume keep sentence chunks); 103 passed with numpy; 95 passed, 8 skipped with numpy blocked; ruff clean'
+      - 'Mutation check: replay without per_sentence, and low lane without per_sentence: each failed its test; server.py restored from a scratchpad backup (cmp identical)'
+      - 'Measurement procedure: as round 1 (worktree server, real Kokoro, bm_george x1.1, logging pw-play wrapper, omarchy); cold case via scratchpad lanes/cold.py: output quiet 5 s, A posts /warm then /speak low, 0.5 s later B posts /warm then /speak urgent; latency = player start minus B /speak send'
+      - 'AC6, one sentence per chunk (first attempt): 4.18, 1.02, 1.81, 3.31, 3.01 s: median 3.01 s (bar 3.0: FAIL by 0.01 s), worst 4.18 s (bar 5.6), load average 13'
+      - 'Decision 18 (Lucas): also split long sentences at commas'
+      - 'AC6, comma pieces: 1.38, 1.47, 0.89, 1.58, 0.82 s: median 1.38 s (bar 3.0: PASS), worst 1.58 s (bar 5.6: PASS), load average 10-11'
+      - 'AC1 over a playing status line after the change, 8 runs: 1.19, 0.96, 1.93, 0.84, 0.96, 1.58, 0.99, 1.27 s; last 5-run set median 0.99 s, worst 1.58 s; first set had 1.93 s'
+      - 'Decision 19 (Lucas): AC1 bar over a status line becomes median of 5 under 1.5 s, no run over 2.5 s: PASS (median 0.99-1.19 s, worst 1.93 s)'
+      - 'AC1 over a reply: 0.83 s after the chunk ended, resume A2 then A3 once (PASS); AC2 stale: 0 chunks (PASS)'
+      - 'Docs: CLAUDE.md (status-line splitting), memory-bank/systemPatterns.md (split_chunks divergence); story ACs 1 and 6 and decisions 18-19; issue #5 comment 6880916981'
     reopened_at: '2026-11-14T16:34:14Z'
     reopened_reason: 'Second grilling after S4 (decisions 12-17): fix the cold case in this story (AC6, sentence chunks for status lines); decision 16 sends it through S3 and a fresh S4 again. Round 1 below completed 2026-11-14T14:18:39Z at c5b4be7.'
     completed_at: '2026-11-14T14:18:39Z'

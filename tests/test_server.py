@@ -50,6 +50,21 @@ class SplitChunksTest(unittest.TestCase):
 
     def test_empty(self):
         self.assertEqual(server.split_chunks("   "), [])
+        self.assertEqual(server.split_chunks("   ", per_sentence=True), [])
+
+    def test_per_sentence_splits_at_sentence_ends_and_lines_only(self):
+        self.assertEqual(server.split_chunks("One. Two! Three? Four: five; six, seven.\n eight ", True),
+                         ["One.", "Two!", "Three?", "Four: five; six, seven.", "eight"])
+
+    def test_per_sentence_splits_a_long_sentence_at_commas(self):
+        clause = "this clause is about thirty chars"
+        long = ", ".join([clause] * 6) + "."
+        chunks = server.split_chunks(f"Short one. {long}", per_sentence=True)
+        self.assertEqual(chunks[0], "Short one.")
+        self.assertEqual(" ".join(chunks[1:]), long)  # nothing lost or reordered
+        for chunk in chunks[1:]:
+            self.assertLessEqual(len(chunk), server.CLAUSE_CHARS)
+        self.assertEqual(server.split_chunks("x" * 100 + ".", True), ["x" * 100 + "."])  # no comma
 
 
 def speaker() -> "server.Speaker":
@@ -470,6 +485,31 @@ class LanesTest(unittest.TestCase):
         sp.speak("reply", "bm_george", 1.0, "a")
         sp.speak("status", "bm_george", 1.0, "a", priority="low")
         self.assertEqual(self.lanes(sp), [("a", 1)])
+
+    def test_status_lines_are_synthesised_one_sentence_at_a_time(self):
+        sp = speaker()
+        text = "Reading the server. Then the tests. Then the docs."
+        sp.speak(text, "bm_george", 1.0, "a", priority="low")
+        sp.speak(text, "bm_george", 1.0, "b")
+        low, normal = sp.queue[1], sp.queue[0]
+        sp.synth = mock.Mock(side_effect=lambda chunk, *_: (chunk, 24000))
+        self.assertEqual([c for c, _ in sp._audio(low)],
+                         ["Reading the server.", "Then the tests.", "Then the docs."])
+        self.assertEqual([c for c, _ in sp._audio(normal)], [text])  # replies keep big chunks
+
+    def test_replays_and_resumes_of_a_status_line_keep_its_sentence_chunks(self):
+        sp = speaker()
+        text = "Reading the server. Then the tests. Then the docs."
+        cur = self.playing(sp, "a", server.LOW, made=["s1"], rate=24000, per_sentence=True)
+        cur.text = text
+        self.assertTrue(sp._resumed(cur).per_sentence)
+        self.assertTrue(sp.replay("a"))
+        job = sp.queue[0]
+        sp.synth = mock.Mock(side_effect=lambda chunk, *_: (chunk, 24000))
+        # The made first sentence plays as is; only the two others are synthesised.
+        self.assertEqual([c for c, _ in sp._audio(job)], ["s1", "Then the tests.", "Then the docs."])
+        sp._remember(job, ["s1", "s2", "s3"], 24000)
+        self.assertIn("a", sp.clips)  # three sentence chunks make the whole utterance
 
     def test_a_question_still_replaces_its_session_s_status_line(self):
         sp = speaker()
