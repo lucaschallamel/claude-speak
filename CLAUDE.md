@@ -25,6 +25,14 @@ echo '{"hook_event_name":"Stop","session_id":"x","transcript_path":"/path/to.jso
 
 Errors from detached runs go to `claude-speak.log` in the data dir; the server writes `server.log`. Installed data dir: `~/.claude/plugins/data/claude-speak-claude-speak/`.
 
+## Project memory and backlog (COPPER)
+
+- Read the six files in `memory-bank/` at session start. Update `activeContext.md` and `progress.md` when work lands.
+- Roadmap: `docs/ROADMAP.md`. Story specs: `docs/roadmap/backlog/`, one file per GitHub issue, numbered by the issue (`US-004` = #4). Board: `docs/roadmap/KANBAN.md`. Keep issue, story file and card in step.
+- Session notes: `docs/dev-journal/YYYY/MM/`.
+- COPPER rules: `.claude/rules/cu/`, managed by `cu-rules`. Only `00-the-user.rules.md` is edited by hand.
+- PRs and issues: always pass `--repo lucaschallamel/claude-speak`, because `gh` defaults to upstream in this fork.
+
 ## Architecture
 
 Two processes:
