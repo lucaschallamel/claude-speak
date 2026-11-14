@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S7_CRITICAL_REVIEW
+current_stage: S8_CAPTURE
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -48,7 +48,7 @@ stages:
       - 'Alternatives: 5 considered (A1-A5), all rejected with reasons'
       - 'What could go wrong: 7 risks (W1-W7) with mitigations'
       - 'Tests mapped to AC1-AC4; AC5 is the README, checked at S6'
-    commit: ''
+    commit: '987dd0e'
   S3_EXECUTE:
     status: completed
     completed_at: '2026-11-14T19:30:00Z'
@@ -119,11 +119,29 @@ stages:
       - 'User disposition: "stop worked, continue"'
     commit: '3bcf23c'
   S7_CRITICAL_REVIEW:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
-    commit: ''
+    status: completed
+    completed_at: '2026-11-14T22:20:00Z'
+    reviewed_commit: '3f92752ea2a050fc90d73408354ff21b6b9a655c'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/dod-verify.md (DoD Level 1 from framework-authoring/resources/definition-of-done.md), fresh-context-review.md, story, git diff main...3f92752ea2a050fc90d73408354ff21b6b9a655c, pipeline_validator.py status output, the pipeline YAML, CLAUDE.md; Verdict dictated: no'
+      - 'Author pass after the fresh report'
+    evidence:
+      - 'Delegated to /cu:dod-verify: WARN; AC clauses 18 PASS, 1 WARN (AC3c double tap); DoD 17 PASS, 5 WARN, 5 SKIP; no FAIL'
+      - 'Challenge log: 7 entries from 2 perspectives (user, maintainer/upstream merger), all assessed'
+      - 'User disposition: "review, assess, mitigate all issues, findings and risks, if any, with precision and care"'
+      - 'AC3c: double tap within 0.5 s of a replay starting is ignored (DOUBLE_TAP, Job.started); test fails on the previous code; a later press restarts (tested)'
+      - 'Docs drift: /replay docstring now states the restart-what-is-playing default'
+      - 'Handler 200/404 for /replay: ReplayEndpointTest over a real unix socket'
+      - 'CR2 I001 import order fixed; ruff E4,E7,E9,F,I clean on changed files'
+      - 'VC1: S2 commit 987dd0e recorded'
+      - 'TE1 coverage measured (coverage.py, branch): all lines added by US-004 covered except job.started in _loop (loop thread is not run by unit tests, pre-existing); poll keep-waiting branch now covered by a new test. Whole files 42% client / 63% server, reflecting older untested code (hooks, main, download).'
+      - 'VC3 version bump: decided not in this story; release per milestone (Lucas, 2026-11-07); 0.4.0 after #5 brings again and the replay hotkey to installs'
+      - 'TE4 CI on the PR: checked at S10'
+      - 'Scope note: the 15 story files changed at S6 (validator fixes for PR #22) stay in this PR and are named in its description'
+      - 'CQ7 principle tags: not a project convention; skipped'
+      - 'Tests: 78 OK locally; 73 OK + 5 skipped with numpy blocked (CI)'
+      - 'Changed after review: scripts/server.py, tests/test_server.py (e775aa1)'
+    commit: 'e775aa1'
   S8_CAPTURE:
     status: pending
     completed_at: ''
