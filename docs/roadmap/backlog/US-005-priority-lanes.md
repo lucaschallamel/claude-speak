@@ -15,6 +15,7 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-14**: [S3_EXECUTE] Lanes, preemption, resume and stale drop built in server and client; 21 new tests (99 total); real Kokoro run: question 0.72-1.02 s over a status line, 0.77 s after a reply's chunk, resume without repeats, stale line dropped.
 > - **2026-11-14**: [S2_PLAN] Plan written; grilling settled 7 more decisions (5-11): same-session status lines dropped, AC1 latency bar 1.5 s.
 > - **2026-11-14**: [S1_KICKOFF] Issue #5 re-read (no comments). Scope narrowed to cross-session preemption (same-session replacement already cuts at once); 4 decisions from Lucas; ACs 2 -> 5; challenge log 7 entries; standard profile kept.
 > - **2026-11-14**: [S0_SELECT] Story selected; Orca worktree us-005-priority-lanes and branch feature/US-005-priority-lanes created from main be27e10; pipeline initiated, standard profile.

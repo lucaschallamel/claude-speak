@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S3_EXECUTE
+current_stage: S4_CODE_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -52,7 +52,25 @@ stages:
       - 'What could go wrong: 8 risks (W1-W8) each with a check; test plan maps every AC'
       - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
     commit: ''
-  S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S3_EXECUTE:
+    status: completed
+    completed_at: '2026-11-14T14:18:39Z'
+    reviewers:
+      - 'Author (Claude Code): AC self-review below'
+    evidence:
+      - 'Code: scripts/server.py (PRIORITIES, STALE_LOW, hook_time, Job fields, speak/_enqueue/_preempt_for/_resumed, _next, _audio, _run break path); scripts/claude_speak.py (STALE_LOW, priority on spawn_worker/send_to_server, urgent for AskUserQuestion, low for interjections, worker stale drop)'
+      - 'Tests: 21 new (LanesTest x14 server incl. /speak endpoint, LanesTest x6 client, plus endpoint helper generalised); python3 -m unittest discover tests: 99 passed, 0 failed, 0 skipped (numpy installed); 91 passed, 8 skipped with numpy and kokoro_onnx blocked (as CI); 12/12 parallel runs exit 0'
+      - 'Lint: uvx ruff@0.15.4 check --select E4,E7,E9,F,I on changed Python files: all checks passed'
+      - 'Real hardware (procedure: worktree server via ensure_server, real Kokoro kokoro-v1.0.onnx, voice bm_george x1.1, player = logging wrapper around pw-play on omarchy, own CLAUDE_SPEAK_DATA; script scratchpad lanes/measure.py; latency = player start time minus /speak send time, same clock)'
+      - 'AC1 over a playing status line: 0.77 s, 1.02 s, 0.72 s (3 runs, bar 1.5 s); 2 chunks started per run (A cut, then B)'
+      - 'AC1/AC3 over a playing 3-chunk reply: question 0.77 s after A chunk 1 ended (bar 1.5 s), then A2 and A3 once each (4 chunks total, no repeat)'
+      - 'AC2: status line with at = now - 6 s: 0 chunks played; server log "dropped a stale status line"'
+      - 'Observation (outside AC1 wording): when the question arrives before the status line is audible and the output is asleep, it waited 3.19 s (full 2 s LEAD_IN wake plus the status line synthesis holding synth_lock)'
+      - 'AC self-review: AC1 met (tests + measurement); AC2 met (worker + server tests, real run); AC3 met (resume tests, real run); AC4 met (order, replay first, same-session drop, normal cuts low); AC5 met (validation tests, endpoint test, README/CLAUDE.md/docstring)'
+      - 'Deviation log: stale drop moved into a _next helper; added busy_until reset when the dropped status line was the last job (else /health stays busy and blocks interjections; found while coding, not in the plan); hook_time is a module function for testing'
+      - 'Docs: README fork additions (Priority lanes), CLAUDE.md server paragraph, server.py docstring, memory-bank/systemPatterns.md fork divergences'
+      - 'S1 open challenge 7 (latency under synth_lock) resolved by measurement'
+    commit: ''
   S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S5_ARCH_SEC_COMP_REVIEW:
     { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

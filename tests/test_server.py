@@ -394,6 +394,174 @@ class ReplayTest(unittest.TestCase):
         self.assertEqual(len(list(sp._audio(job))), 1)
 
 
+THREE_CHUNKS = "One sentence. " * 50  # split_chunks: three chunks
+
+
+class LanesTest(unittest.TestCase):
+    """Priority lanes (US-005): order, preemption, resume and stale status lines."""
+
+    def playing(self, sp, session, priority, **kw):
+        sp.current = server.Job(session, "now", "bm_george", 1.0, priority=priority, **kw)
+        sp.proc = mock.Mock(**{"poll.return_value": None})
+        return sp.current
+
+    def lanes(self, sp):
+        return [(j.session, j.priority) for j in sp.queue]
+
+    def test_unknown_or_missing_priority_is_normal(self):
+        sp = speaker()
+        for i, value in enumerate([None, "bogus", 7, ["urgent"], "low", "urgent"]):
+            sp.speak("hi", "bm_george", 1.0, f"s{i}", priority=value)
+        self.assertEqual([j.priority for j in sp.queue], [0, 1, 1, 1, 1, 2])
+
+    def test_hook_time_falls_back_to_now(self):
+        now = 1000.0
+        for value in [None, "x", float("inf"), float("nan"), now + 60, [1]]:
+            self.assertEqual(server.hook_time(value, now), now, value)
+        self.assertEqual(server.hook_time("990.5", now), 990.5)
+
+    def test_lanes_in_order_first_come_first_served_within_a_lane(self):
+        sp = speaker()
+        self.playing(sp, "z", server.PRIORITIES["urgent"])
+        for session, priority in [("a", "low"), ("b", "normal"), ("c", "urgent"), ("d", "normal")]:
+            sp.speak("hi", "bm_george", 1.0, session, priority=priority)
+        self.assertEqual(self.lanes(sp), [("c", 0), ("b", 1), ("d", 1), ("a", 2)])
+
+    def test_a_replay_goes_before_questions(self):
+        sp = speaker()
+        sp.clips["a"], sp.last_clip = server.Clip(["s"], 24000, time.time()), "a"
+        sp.speak("question", "bm_george", 1.0, "b", priority="urgent")
+        self.assertTrue(sp.replay("a"))
+        sp.speak("question", "bm_george", 1.0, "c", priority="urgent")
+        self.assertEqual(self.lanes(sp), [("a", -1), ("b", 0), ("c", 0)])
+
+    def test_another_session_cuts_a_status_line_at_once(self):
+        for priority in ("urgent", "normal"):
+            sp = speaker()
+            cur = self.playing(sp, "a", server.LOW)
+            sp.speak("hi", "bm_george", 1.0, "b", priority=priority)
+            self.assertTrue(cur.cancelled, priority)
+            sp.proc.terminate.assert_called_once()
+            self.assertEqual(self.lanes(sp), [("b", server.PRIORITIES[priority])])
+
+    def test_a_question_waits_for_the_reply_s_chunk_boundary(self):
+        sp = speaker()
+        cur = self.playing(sp, "a", server.NORMAL)
+        sp.speak("question", "bm_george", 1.0, "b", priority="urgent")
+        self.assertTrue(cur.preempt)
+        self.assertFalse(cur.cancelled)
+        sp.proc.terminate.assert_not_called()
+
+    def test_questions_and_replays_are_never_preempted_nor_a_lane_by_its_own(self):
+        for priority, newcomer in [(0, "urgent"), (server.REPLAY_PRIORITY, "urgent"), (1, "normal")]:
+            sp = speaker()
+            cur = self.playing(sp, "a", priority)
+            sp.speak("hi", "bm_george", 1.0, "b", priority=newcomer)
+            self.assertFalse(cur.cancelled or cur.preempt, (priority, newcomer))
+
+    def test_a_status_line_never_replaces_its_session_s_question_or_reply(self):
+        sp = speaker()
+        cur = self.playing(sp, "a", server.PRIORITIES["urgent"])
+        sp.speak("status", "bm_george", 1.0, "a", priority="low")
+        self.assertFalse(cur.cancelled)
+        self.assertEqual(sp.queue, [])
+        sp = speaker()
+        self.playing(sp, "z", server.PRIORITIES["urgent"])
+        sp.speak("reply", "bm_george", 1.0, "a")
+        sp.speak("status", "bm_george", 1.0, "a", priority="low")
+        self.assertEqual(self.lanes(sp), [("a", 1)])
+
+    def test_a_question_still_replaces_its_session_s_status_line(self):
+        sp = speaker()
+        cur = self.playing(sp, "a", server.LOW)
+        sp.speak("question", "bm_george", 1.0, "a", priority="urgent")
+        self.assertTrue(cur.cancelled)
+
+    def test_stale_status_lines_are_dropped_when_their_turn_comes(self):
+        sp = speaker()
+        now = time.time()
+        sp.queue = [server.Job("a", "old", "v", 1.0, priority=server.LOW, at=now - 6),
+                    server.Job("b", "fresh", "v", 1.0, priority=server.LOW, at=now - 1)]
+        with sp.state_lock:
+            self.assertEqual(sp._next().text, "fresh")
+
+    def test_dropping_the_last_job_ends_busy(self):
+        sp = speaker()
+        sp.busy_until = time.time() + 3600
+        sp.queue = [server.Job("a", "old", "v", 1.0, priority=server.LOW, at=time.time() - 6)]
+
+        def take():
+            with sp.state_lock:
+                sp._next()
+        threading.Thread(target=take, daemon=True).start()
+        self.assertTrue(wait_until(lambda: sp.busy_until < time.time() + 60), "still busy")
+        with sp.state_lock:
+            sp.queue.append(server.Job("b", "next", "v", 1.0))
+            sp.wake.notify()
+
+    def run_job(self, sp, job, on_spawn=None):
+        """Run job through _run with a fake player; return the played chunks' sample counts."""
+        played = []
+
+        def spawn(path):
+            played.append((Path(path).stat().st_size - 44) // 2)  # 16-bit mono WAV
+            if on_spawn:
+                on_spawn(len(played))
+        sp._spawn, sp._reap = spawn, lambda proc: None
+        sp._run(job)
+        return played
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_a_preempted_reply_resumes_after_its_played_chunks_reusing_made_ones(self):
+        np = server.np
+        sp = speaker()
+        sizes = iter([10, 11, 12, 99])
+        sp.synth = mock.Mock(side_effect=lambda *_: (np.ones(next(sizes), np.float32), 24000))
+        sp.player, sp.lead_in = ["true"], lambda: 0.0
+        job = server.Job("a", THREE_CHUNKS, "bm_george", 1.0)
+
+        def preempt(n):
+            self.assertTrue(wait_until(lambda: len(job.made) == 3), "chunks not made")
+            job.preempt = True  # a question from another session, while chunk 1 plays
+        with private_tmp() as tmp:
+            self.assertEqual(self.run_job(sp, job, preempt), [10])
+            self.assertEqual(self.lanes(sp), [("a", server.NORMAL)])
+            rest = sp.queue.pop(0)
+            self.assertEqual(self.run_job(sp, rest), [11, 12])
+            self.assertTrue(wait_until(lambda: not any(tmp.iterdir())), "leftover temp files")
+        self.assertEqual(sp.synth.call_count, 3)
+        self.assertEqual([len(c) for c in sp.clips["a"].chunks], [10, 11, 12])
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_a_resume_synthesises_only_the_chunks_not_made(self):
+        np = server.np
+        sp = speaker()
+        sp.synth = mock.Mock(side_effect=lambda *_: (np.ones(20, np.float32), 24000))
+        sp.player, sp.lead_in = ["true"], lambda: 0.0
+        job = server.Job("a", THREE_CHUNKS, "bm_george", 1.0, played=1,
+                         clip=server.Clip([np.ones(10, np.float32)] * 2, 24000, time.time()))
+        job.made = job.clip.chunks[:1]
+        self.assertEqual(self.run_job(sp, job), [10, 20])
+        self.assertEqual(sp.synth.call_count, 1)
+        self.assertEqual(job.played, 3)
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_no_resume_when_preempted_during_the_last_chunk_or_then_cancelled(self):
+        np = server.np
+        for text, cancel in [("One short sentence.", False), (THREE_CHUNKS, True)]:
+            sp = speaker()
+            sp.synth = mock.Mock(side_effect=lambda *_: (np.ones(10, np.float32), 24000))
+            sp.player, sp.lead_in = ["true"], lambda: 0.0
+            job = server.Job("a", text, "bm_george", 1.0)
+
+            def preempt(n):
+                job.preempt = True
+                job.cancelled = cancel  # e.g. the same session spoke again before the boundary
+            with private_tmp():
+                self.assertEqual(len(self.run_job(sp, job, preempt)), 1)
+            self.assertEqual(sp.queue, [], text[:10])
+
+
 class ServerSocketTest(unittest.TestCase):
     def test_only_the_user_can_connect_whatever_the_umask(self):
         tmp = tempfile.mkdtemp()
@@ -412,7 +580,7 @@ class ServerSocketTest(unittest.TestCase):
 class ReplayEndpointTest(unittest.TestCase):
     """POST /replay over a real unix socket, with a stand-in speaker."""
 
-    def post(self, has_clip, body):
+    def post(self, has_clip, body, endpoint="/replay"):
         fake = mock.Mock()
         fake.replay.return_value = has_clip
         path = os.path.join(tempfile.mkdtemp(), "s.sock")
@@ -420,7 +588,7 @@ class ReplayEndpointTest(unittest.TestCase):
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         try:
             conn = claude_speak._UnixConnection(Path(path), 5)
-            conn.request("POST", "/replay", body=json.dumps(body),
+            conn.request("POST", endpoint, body=json.dumps(body),
                          headers={"Content-Type": "application/json"})
             resp = conn.getresponse()
             return resp.status, json.loads(resp.read()), fake
@@ -437,6 +605,12 @@ class ReplayEndpointTest(unittest.TestCase):
         status, body, fake = self.post(False, {})
         self.assertEqual((status, body), (404, {"error": "nothing to replay"}))
         fake.replay.assert_called_once_with("")
+
+    def test_speak_passes_priority_and_hook_time_through(self):
+        status, _, fake = self.post(True, {"text": "hi", "session": "s1", "priority": "urgent",
+                                           "at": 12.5}, "/speak")
+        self.assertEqual(status, 202)
+        fake.speak.assert_called_once_with("hi", "af_heart", 1.0, "s1", "", "urgent", 12.5)
 
 
 class WatchDictationTest(unittest.TestCase):

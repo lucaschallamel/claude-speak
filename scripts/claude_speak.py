@@ -52,6 +52,9 @@ SPEAK_MARKER = "🔊"
 # Mid-turn interjections: speak Claude's latest status line after a tool call, at
 # most this often, and only while nothing else is being spoken.
 INTERJECT_GAP = 15
+# A status line whose summary took longer than this after its hook is dropped
+# (the server drops it too if it waits this long; STALE_LOW in server.py).
+STALE_LOW = 5.0
 TRANSCRIPT_TAIL = 256 * 1024
 
 # Cue vocabulary for a TalkingHead avatar (see CLAUDE_SPEAK_AVATAR_URL).
@@ -339,7 +342,7 @@ def maybe_interject(data: Path, session_id: str, transcript: Path, settings: dic
     if not health or health.get("busy"):
         return
     state.write_text(json.dumps({"uuid": uuid, "at": time.time()}))
-    spawn_worker(data, text, settings, session=session_id, label=label)
+    spawn_worker(data, text, settings, session=session_id, label=label, priority="low")
 
 
 def last_response(transcript: Path) -> str:
@@ -517,13 +520,16 @@ def ensure_server(data: Path, wait: float = 900) -> dict:
     raise RuntimeError(f"the TTS server did not start; see {data / 'server.log'}")
 
 
-def send_to_server(data: Path, text: str, settings: dict, session: str = "", label: str = "") -> None:
+def send_to_server(data: Path, text: str, settings: dict, session: str = "", label: str = "",
+                   priority: str = "normal", at: float | None = None) -> None:
     """Queue speech. session lets a newer reply replace an older one; label names
-    the project aloud when other sessions are speaking too."""
+    the project aloud when other sessions are speaking too; priority (urgent, normal,
+    low) picks the lane, and at (the hook's time) lets the server drop a stale status line."""
     ensure_server(data)
     request(data, "POST", "/speak",
             {"text": text, "voice": settings["voice"], "speed": settings["speed"],
-             "session": session, "label": label})
+             "session": session, "label": label, "priority": priority,
+             "at": time.time() if at is None else at})
 
 
 def send_cue(mood: str, gesture: str) -> None:
@@ -557,11 +563,12 @@ def log_error(data: Path, message: str) -> None:
 
 
 def spawn_worker(data: Path, text: str, settings: dict, force_full: bool = False,
-                 session: str = "", label: str = "", rephrase: dict | None = None) -> None:
+                 session: str = "", label: str = "", rephrase: dict | None = None,
+                 priority: str = "normal") -> None:
     """Summarize and speak in a detached process so the caller returns immediately.
     rephrase ({"previous", "note"}) asks for a clearer summary instead."""
     job = {"text": text, "settings": settings, "force_full": force_full,
-           "session": session, "label": label, "t": time.time()}
+           "session": session, "label": label, "t": time.time(), "priority": priority}
     if rephrase is not None:
         job["rephrase"] = rephrase
     proc = subprocess.Popen(
@@ -622,7 +629,8 @@ def cmd_hook(args) -> None:
         if event.get("tool_name") == "AskUserQuestion":
             text = question_text(event.get("tool_input") or {})
             if text:
-                spawn_worker(data, text, settings, session=session_id, label=label)
+                spawn_worker(data, text, settings, session=session_id, label=label,
+                             priority="urgent")
         return
     # /speak already spoke; don't also speak its acknowledgement.
     skip = data / f"skip-{_safe_id(session_id)}"
@@ -667,11 +675,15 @@ def cmd_worker(args) -> None:
         hush = data / f"hush-{_safe_id(session)}"
         if hush.exists() and hush.stat().st_mtime > job.get("t", 0):
             return  # a new prompt came in while this was prepared
+        priority = job.get("priority", "normal")
+        if priority == "low" and time.time() - job.get("t", 0) > STALE_LOW:
+            return  # a status line that took this long to summarise is out of date
         if text and (cue := CUE.match(text)):
             text = text[cue.end():]
             send_cue(*cue.groups())
         if text:
-            send_to_server(data, text, settings, session, job.get("label", ""))
+            send_to_server(data, text, settings, session, job.get("label", ""),
+                           priority, job.get("t"))
     except Exception as exc:  # detached: the log is the only place errors can go
         log_error(data, f"speak failed: {exc}")
 

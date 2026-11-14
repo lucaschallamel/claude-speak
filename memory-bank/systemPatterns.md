@@ -28,7 +28,13 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
 - `Speaker._run` in `scripts/server.py` (US-004): the consumer polls the clip queue every 50 ms,
   returns as soon as its job is cancelled, and a drain thread deletes the cancelled producer's
   leftover files. This lets a replay or newer reply start at once instead of waiting for the chunk
-  being synthesised. Covered by `ReplayTest` in `tests/test_server.py`.
+  being synthesised. Covered by `ReplayTest` in `tests/test_server.py`. US-005 added the
+  preemption checks (`job.preempt`), the `played` count and the resume re-queue on the break path;
+  covered by `LanesTest`.
+- `Speaker.speak` and `Speaker._loop` in `scripts/server.py` (US-005): `speak` inserts by lane
+  (`_enqueue`) instead of appending, drops a status line that would replace its session's question
+  or reply, and preempts another session's lower-lane speech (`_preempt_for`). `_loop` picks jobs
+  through `_next`, which drops stale status lines.
 - `Server.__init__` in `scripts/server.py` (US-004): binds the socket under umask `0o177`, so only
   the user can connect even when it falls back to a shared `/tmp`.
 
