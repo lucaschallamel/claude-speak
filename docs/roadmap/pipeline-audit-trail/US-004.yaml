@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S8_CAPTURE
+current_stage: S10_MERGE
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -153,11 +153,17 @@ stages:
       - 'README update: docs/roadmap/README.md created; README.md and docs/dev-journal/README.md reviewed, current'
       - 'prune-memory-bank.py: 1 block rolled; --check exit 0 (sizes not checked by the script: no budget table readable; bank is about 1,500 words)'
       - 'check-memory-bank-consistency.py (COPPER_DOCS_ROOT=.): PASS'
-    commit: ''
+      - 'User hold disposition: "continue to s9" (option [A])'
+    commit: 'd955fcf'
   S9_CLOSE:
-    status: pending
-    completed_at: ''
-    evidence: []
+    status: completed
+    completed_at: '2026-11-14T23:05:00Z'
+    evidence:
+      - 'Delegated to /cu:story-update: AC1-AC5 ticked, S9 and S4-S8 progress entries added; status stays In Progress (Done at merge, TD-173)'
+      - '/cu:readme-update ran at S8 (docs/roadmap/README.md created); no further README changes at S9'
+      - 'Closure checks: dev_journal, memory_bank, readme_review, commit_evidence, pr_readiness, deliverables_resolved, dod_verified pass; backlog_status and board_status flip post-merge'
+      - 'Close docs committed (no push yet): docs(US-004): S9 close documentation'
+      - 'Tests before commit: 78 OK'
     commit: ''
   S10_MERGE:
     status: pending
@@ -176,11 +182,19 @@ closure_checks:
   readme_review:
     status: pass
     reason: '/cu:readme-update: README.md (Instant replay, Hotkeys) updated during S3-S5 and current; docs/dev-journal/README.md current; docs/roadmap/README.md created (Lucas chose docs/roadmap only; no new README in upstream scripts/ and tests/, memory-bank/ defined by COPPER rules)'
-  commit_evidence: { status: pending, reason: '' }
-  pr_readiness: { status: pending, reason: '' }
+  commit_evidence:
+    status: pass
+    reason: 'Conventional commits per stage on feature/US-004-instant-replay; S1 15a963a, S2 987dd0e, S3 8a99ec8, S4 e1c21ace, S5 baf21f6, S6 3bcf23c, S7 e775aa1, S8 d955fcf, S9 close-docs commit'
+  pr_readiness:
+    status: pass
+    reason: 'Branch clean after the S9 commit; 78 tests OK; PR created at S10'
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
-  deliverables_resolved: { status: pending, reason: '' }
-  dod_verified: { status: pending, reason: '' }
+  deliverables_resolved:
+    status: pass
+    reason: 'AC1-AC5 ticked in the story file with evidence at S6/S7; technical requirements met; follow-ups recorded (trust-boundary-paths.json, release 0.4.0 after #5)'
+  dod_verified:
+    status: pass
+    reason: '/cu:dod-verify at S7: no FAIL; WARN items mitigated or decided (see S7 evidence)'
 quality_gates:
   lint:
     status: pass
