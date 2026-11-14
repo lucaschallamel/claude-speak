@@ -3,6 +3,7 @@
 Run: python3 -m unittest discover tests
 """
 
+import contextlib
 import json
 import os
 import sys
@@ -108,6 +109,24 @@ class SpeakerQueueTest(unittest.TestCase):
         sp = speaker()
         self.assertEqual(sp.resolve_voice("bm_george"), "bm_george")
         self.assertEqual(sp.resolve_voice("xx_nobody"), "af_heart")
+
+
+@contextlib.contextmanager
+def private_tmp():
+    """Temp WAVs go to a fresh dir, so a real claude-speak server writing to /tmp can't interfere."""
+    tmp = Path(tempfile.mkdtemp())
+    with mock.patch.object(tempfile, "tempdir", str(tmp)):
+        yield tmp
+
+
+def wait_until(cond, timeout: float = 5.0) -> bool:
+    """Poll cond() until true or timeout; background cleanup takes a moment on a busy machine."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if cond():
+            return True
+        time.sleep(0.02)
+    return cond()
 
 
 class ReplayTest(unittest.TestCase):
@@ -279,7 +298,7 @@ class ReplayTest(unittest.TestCase):
 
         def synth(*_):
             if not first[0]:
-                release.wait(5)  # the second chunk is slow to make
+                release.wait(30)  # the second chunk is far slower than the join below
             first[0] = False
             return np.ones(10, np.float32), 24000
 
@@ -287,14 +306,13 @@ class ReplayTest(unittest.TestCase):
             job.cancelled = True  # stopped while its first chunk plays
         sp.player, sp.lead_in, sp.synth = ["true"], lambda: 0.0, synth
         sp._spawn, sp._reap = spawn, lambda proc: None
-        before = set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav"))
-        runner = threading.Thread(target=sp._run, args=(job,))
-        runner.start()
-        runner.join(1)
-        self.assertFalse(runner.is_alive(), "_run waited for the slow chunk")
-        release.set()
-        time.sleep(0.2)
-        self.assertEqual(set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav")), before)
+        with private_tmp() as tmp:
+            runner = threading.Thread(target=sp._run, args=(job,))
+            runner.start()
+            runner.join(5)
+            self.assertFalse(runner.is_alive(), "_run waited for the slow chunk")
+            release.set()
+            self.assertTrue(wait_until(lambda: not any(tmp.iterdir())), "leftover temp files")
 
     @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
     def test_playback_waits_for_a_slow_chunk_when_nothing_is_cancelled(self):
@@ -332,11 +350,10 @@ class ReplayTest(unittest.TestCase):
         sp.player, sp.lead_in = ["true"], lambda: 0.0
         sp.synth = lambda *_: (np.ones(10, np.float32), 24000)
         sp._spawn, sp._reap = spawn, lambda proc: None
-        before = set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav"))
-        sp._run(job)
-        self.assertEqual(len(spawned), 1)
-        time.sleep(0.3)
-        self.assertEqual(set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav")), before)
+        with private_tmp() as tmp:
+            sp._run(job)
+            self.assertEqual(len(spawned), 1)
+            self.assertTrue(wait_until(lambda: not any(tmp.iterdir())), "leftover temp files")
         self.assertNotIn("a", sp.clips)  # cut off before all its chunks were made
 
     @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
