@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S5_ARCH_SEC_COMP_REVIEW
+current_stage: S6_TEST_QUALITY_VERIFY
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -130,7 +130,26 @@ stages:
       - 'Fixes committed and pushed'
     commit: '67f4419'
   S5_ARCH_SEC_COMP_REVIEW:
-    { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+    status: completed
+    completed_at: '2026-11-14T17:01:49Z'
+    reviewed_commit: '70fd3f3f856ce01cf9568212b0963c1317f044a5'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story US-005, git diff main...70fd3f3, CLAUDE.md, memory-bank/systemPatterns.md and techContext.md, trust-boundary-paths.json read from main; ran the suite and a float overflow experiment; Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed finding 1 (float(10**400) raises OverflowError; the handler catches Exception and returns 500 after _cancel_session ran); no new findings'
+    evidence:
+      - 'Delegated to /cu:arch-review as a fresh-context review: PASS'
+      - 'trust boundary touched, not security-sensitive: the diff changes scripts/server.py and scripts/claude_speak.py (on the list read from main) but adds no endpoint, authority or egress; the two new /speak fields (priority, at) are allow-listed or clamped, reach only same-user processes over the 0600 socket, and at worst reorder or drop that user''s own speech, which /stop already allows; the fresh reviewer agreed independently (decision 12)'
+      - 'Findings: 0 critical, 0 high, 0 medium, 2 low, 4 info (all fresh)'
+      - 'Risk register (fresh): R1 malformed at cancels speech L/L (fixed); R2 urgent bursts starve replies L/L (accepted: same-user socket, questions rare); R3 wasted synthesis on preempt M/L (accepted: cost only, tests cover no repeat/skip); R4 memory bank vs CI drift M/L (fixed); R5 stale server after upgrade M/L (release note); R6 upstream divergence M/M (small helpers, decision 17)'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'S5-F1 Low fixed: hook_time catches OverflowError; speak computes the hook time before anything changes; tests: hook_time with 10**400, and speak with at=10**400 queues the job at now; mutation (catch removed) made both tests error'
+      - 'S5-F2 Low fixed: memory-bank/techContext.md says the numpy tests run on the 3.13 CI jobs'
+      - 'S5-F3 Info fixed: server.py docstring and a comment in speak say priority is a request, not checked'
+      - 'S5-F4 Info no change: unbounded sessions predate US-005 (upstream speak and last_seen), reachable only by the user''s own processes, and US-005 keeps one job per session; a cap would drop real speech or add upstream divergence for no realistic case'
+      - 'S5-F5 Info partly fixed: workflow gets permissions: contents: read; numpy keeps the >=2,<3 range, the same as server.py''s inline deps (an exact pin would drift from it)'
+      - 'S5-F6 Info recorded: story "Release notes (for 0.4.0)": run claude-speak stop after updating; goes into the laptop update block'
+      - 'After fixes: 105 passed with numpy; numpy blocked passed with 8 skipped; ruff clean; workflow YAML parses'
+    commit: ''
   S6_TEST_QUALITY_VERIFY:
     { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

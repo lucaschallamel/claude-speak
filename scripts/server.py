@@ -19,7 +19,8 @@ the reply resumes afterwards. A status line not started 5 s after "at" is droppe
   GET  /health   model, player and voices
   POST /speak    {"text", "voice", "speed", "session", "label", "priority"?, "at"?}; returns
                  at once, plays in turn; "priority" is urgent, normal (default) or low, "at"
-                 the epoch time of the hook that asked for it
+                 the epoch time of the hook that asked for it; priority is a request, not
+                 checked: anyone who can reach the socket (only the user) may ask for urgent
   POST /warm     play silence to wake the output device before speech is ready
   POST /synth    same body; returns the whole utterance as a WAV
   POST /stop     stop playback and clear the queue; {"session"} stops only that session
@@ -209,7 +210,7 @@ def hook_time(at, now: float) -> float:
     """The hook time a client sent, or now when it is missing, unreadable or in the future."""
     try:
         at = float(at)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):  # OverflowError: a huge JSON integer
         return now
     return at if math.isfinite(at) and at <= now else now
 
@@ -320,9 +321,12 @@ class Speaker:
 
     def speak(self, text: str, voice: str, speed: float, session: str = "", label: str = "",
               priority=None, at=None) -> None:
+        # Read before anything changes: a request that fails here cancels nothing.
+        # priority is the client's request; any process that can reach the socket (the user's) may ask.
         lane = PRIORITIES.get(priority, NORMAL) if isinstance(priority, str) else NORMAL
         with self.state_lock:
             now = time.time()
+            asked_at = hook_time(at, now)
             if lane == LOW and any(j.session == session and j.priority < LOW and not j.cancelled
                                    for j in self.queue + [self.current] if j):
                 return  # a status line never replaces this session's question or reply
@@ -332,7 +336,7 @@ class Speaker:
             if label and others:
                 text = f"{re.sub(r'[-_.]+', ' ', label)}: {text}"
             self._cancel_session(session)
-            job = Job(session, text, voice, speed, priority=lane, at=hook_time(at, now),
+            job = Job(session, text, voice, speed, priority=lane, at=asked_at,
                       per_sentence=lane == LOW)
             self._enqueue(job)
             self._preempt_for(job)

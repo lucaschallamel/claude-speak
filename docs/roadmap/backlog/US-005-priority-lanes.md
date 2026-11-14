@@ -15,6 +15,8 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-14**: [S5_ARCH_SEC_COMP_REVIEW] Fresh arch/security review PASS (2 low, 4 info); trust boundary touched, not security-sensitive; huge `at` no longer cancels speech, docs and CI permissions tightened; release note for 0.4.0.
+> - **2026-11-14**: [S4_CODE_REVIEW] Round 2 PASS (2 low, 3 info); semicolon split, replay-truncation test, "about 80" wording.
 > - **2026-11-14**: [S3_EXECUTE] Round 2: status lines split into sentence and comma pieces; cold case median 3.2 -> 1.38 s, worst 5.59 -> 1.58 s; AC1 bar now a median (decision 19); 103 tests.
 > - **2026-11-14**: [S4_CODE_REVIEW] Fresh review PASS (3 low, 3 info); 4 fixed (CI numpy on 3.13, two test gaps, README), 2 accepted. Second grilling: 6 decisions (12-17); cold case fixed in this story (AC6), so S3 reopens.
 > - **2026-11-14**: [S3_EXECUTE] Lanes, preemption, resume and stale drop built in server and client; 21 new tests (99 total); real Kokoro run: question 0.72-1.02 s over a status line, 0.77 s after a reply's chunk, resume without repeats, stale line dropped.
@@ -80,3 +82,7 @@ Lucas settled these in a second grilling session after S4:
 17. Upstream: offer the generic Quiet features (barge-in, hush, replay, lanes) to upstream together, after 0.4.0 has run for a while. No upstream action in this story.
 18. One sentence per chunk missed AC6 by 0.01 s (median 3.01 s, worst 4.18 s at load average 13), because a long sentence still takes 2-3 s to synthesise. Long status-line sentences are also split at commas (and, after the S4 round-2 review, semicolons) into pieces of about 80 characters (at most 81: the packing ignores the joining space, as it always has for replies). Measured after: median 1.38 s, worst 1.58 s.
 19. That makes the AC1 tail slower: while one piece plays, the next is being synthesised, and a question waits for it. Over 8 runs: median 1.08 s, two runs over 1.5 s (1.58, 1.93). The AC1 bar over a status line becomes a median of 5 under 1.5 s with no run over 2.5 s, the same form as AC6. Across both cases the worst wait fell from 5.59 s to 1.93 s.
+
+## Release notes (for 0.4.0)
+
+- After updating, run `claude-speak stop` (or wait up to `CLAUDE_SPEAK_IDLE_TIMEOUT`, 30 minutes): a server started by the old version keeps running without lanes until it exits (S5 finding 6). Put this in the laptop update block.

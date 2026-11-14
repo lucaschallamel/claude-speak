@@ -441,9 +441,15 @@ class LanesTest(unittest.TestCase):
 
     def test_hook_time_falls_back_to_now(self):
         now = 1000.0
-        for value in [None, "x", float("inf"), float("nan"), now + 60, [1]]:
+        for value in [None, "x", float("inf"), float("nan"), now + 60, [1], 10 ** 400]:
             self.assertEqual(server.hook_time(value, now), now, value)
         self.assertEqual(server.hook_time("990.5", now), 990.5)
+
+    def test_a_huge_hook_time_is_queued_as_now_not_an_error(self):
+        sp = speaker()
+        sp.speak("hi", "bm_george", 1.0, "a", priority="low", at=10 ** 400)  # JSON can carry it
+        self.assertEqual(len(sp.queue), 1)
+        self.assertLess(abs(sp.queue[0].at - time.time()), 5)
 
     def test_lanes_in_order_first_come_first_served_within_a_lane(self):
         sp = speaker()
