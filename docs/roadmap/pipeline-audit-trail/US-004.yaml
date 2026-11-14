@@ -1,0 +1,108 @@
+schema_version: 2
+story_id: US-004
+story_path: docs/roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md
+github_issue: 'lucaschallamel/claude-speak#4'
+feature_branch: feature/US-004-instant-replay
+worktree: ~/orca/workspaces/claude-speak/us-004-instant-replay
+review_profile: standard
+change_surface:
+  code: true
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S1_KICKOFF
+status: active
+status_reason: ''
+initiated_at: '2026-11-14T10:38:45Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-14T10:38:45Z'
+    evidence:
+      - 'Orca worktree us-004-instant-replay created from main 275a254'
+      - 'Branch feature/US-004-instant-replay created'
+      - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
+    commit: ''
+  S1_KICKOFF:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S2_PLAN:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S3_EXECUTE:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S4_CODE_REVIEW:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S5_ARCH_SEC_COMP_REVIEW:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S6_TEST_QUALITY_VERIFY:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S7_CRITICAL_REVIEW:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S8_CAPTURE:
+    status: pending
+    completed_at: ''
+    reviewers: []
+    evidence: []
+    commit: ''
+  S9_CLOSE:
+    status: pending
+    completed_at: ''
+    evidence: []
+    commit: ''
+  S10_MERGE:
+    status: pending
+    completed_at: ''
+    evidence: []
+    commit: ''
+closure_checks:
+  backlog_status: { status: pending, reason: '' }
+  board_status: { status: pending, reason: '' }
+  dev_journal: { status: pending, reason: '' }
+  memory_bank: { status: pending, reason: '' }
+  readme_review: { status: pending, reason: '' }
+  commit_evidence: { status: pending, reason: '' }
+  pr_readiness: { status: pending, reason: '' }
+  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved: { status: pending, reason: '' }
+  dod_verified: { status: pending, reason: '' }
+quality_gates:
+  lint: { status: pending, evidence: '' }
+  unit_tests: { status: pending, evidence: '' }
+  integration_tests: { status: pending, evidence: '' }
+  functional_tests: { status: pending, evidence: '' }
+  docs_quality: { status: pending, evidence: '' }
+  validators: { status: pending, evidence: '' }
+verified_claims: []
+pr_readiness: { status: pending, branch: feature/US-004-instant-replay, branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: ''
