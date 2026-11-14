@@ -1,0 +1,77 @@
+schema_version: 2
+story_id: US-005
+story_path: docs/roadmap/backlog/US-005-priority-lanes.md
+github_issue: 'lucaschallamel/claude-speak#5'
+feature_branch: feature/US-005-priority-lanes
+worktree: ~/orca/workspaces/claude-speak/us-005-priority-lanes
+review_profile: standard
+change_surface:
+  code: true
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S2_PLAN
+status: active
+status_reason: ''
+initiated_at: '2026-11-14T13:51:42Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-14T13:51:42Z'
+    evidence:
+      - 'Orca worktree us-005-priority-lanes created from main be27e10 (no issue link: Orca links upstream issues by mistake)'
+      - 'Branch feature/US-005-priority-lanes created; session moved in with EnterWorktree'
+      - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
+      - 'pipeline_validator audit at init: passed, exit 0'
+    commit: ''
+  S1_KICKOFF:
+    status: completed
+    completed_at: '2026-11-14T13:58:28Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: four decisions via AskUserQuestion (all recommended options)'
+    evidence:
+      - 'Issue #5 re-read 2026-11-14: no comments before kickoff'
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-005-s1-kickoff.md'
+      - 'Challenge log: 7 entries (standard minimum 3); 6 resolved, 1 open (question latency, measured in S3/S6)'
+      - 'Story file updated: scope to cross-session, ACs 2 -> 5, technical requirements, decisions section'
+      - 'Decisions posted on issue #5 (comment 6878349126)'
+    commit: ''
+  S2_PLAN: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S5_ARCH_SEC_COMP_REVIEW:
+    { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S6_TEST_QUALITY_VERIFY:
+    { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+closure_checks:
+  backlog_status: { status: pending, reason: '' }
+  board_status: { status: pending, reason: '' }
+  dev_journal: { status: pending, reason: '' }
+  memory_bank: { status: pending, reason: '' }
+  readme_review: { status: pending, reason: '' }
+  commit_evidence: { status: pending, reason: '' }
+  pr_readiness: { status: pending, reason: '' }
+  pr_creation:
+    { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved: { status: pending, reason: '' }
+  dod_verified: { status: pending, reason: '' }
+quality_gates:
+  lint: { status: pending, evidence: '' }
+  unit_tests: { status: pending, evidence: '' }
+  integration_tests: { status: pending, evidence: '' }
+  functional_tests: { status: pending, evidence: '' }
+  docs_quality: { status: pending, evidence: '' }
+  validators: { status: pending, evidence: '' }
+verified_claims: []
+pr_readiness:
+  { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: ''
