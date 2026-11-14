@@ -11,7 +11,15 @@ author: 'Claude Code'
 created: '2026-11-07'
 last_modified: '2026-11-14'
 github_issue: 15
+research_question: 'Which local, offline TTS engine fills Kokoro''s gaps (Australian English, richer French) well enough to be worth a second model?'
+time_box: '2 days'
+expected_outcome: 'Recommendation (or not worth it) on issue #15 with samples; if yes, a follow-up story for engine-prefixed voices'
+decision_deadline: 2027-01-31  # placeholder for: before milestone 4 Smarter speech starts
 ---
+
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #15 (filed 2026-11-07); status Draft. Time box 2 days and decision deadline before milestone 4 set by Lucas (2027-01-31 is a placeholder date).
 
 # SP-015: Spike: second TTS engine for accents and languages Kokoro lacks (Australian, richer French)
 

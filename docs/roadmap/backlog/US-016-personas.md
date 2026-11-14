@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 16
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #16 (filed 2026-11-07); status Draft.
+
 # US-016: Personas: a voice, tone and avatar per session
 
 > GitHub issue [#16](https://github.com/lucaschallamel/claude-speak/issues/16) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

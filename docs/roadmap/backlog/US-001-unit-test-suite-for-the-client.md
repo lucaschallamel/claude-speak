@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 1
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #1 (filed 2026-11-07), already delivered and closed on GitHub.
+
 # US-001: Unit test suite for the client and server pure functions
 
 > GitHub issue [#1](https://github.com/lucaschallamel/claude-speak/issues/1) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

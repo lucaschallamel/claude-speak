@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 7
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #7 (filed 2026-11-07); status Draft.
+
 # US-007: Pronounce code identifiers and paths as words
 
 > GitHub issue [#7](https://github.com/lucaschallamel/claude-speak/issues/7) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

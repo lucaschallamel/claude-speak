@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 10
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #10 (filed 2026-11-07); status Draft.
+
 # US-010: French and multilingual replies with a matching voice
 
 > GitHub issue [#10](https://github.com/lucaschallamel/claude-speak/issues/10) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

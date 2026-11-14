@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 11
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #11 (filed 2026-11-07); status Draft.
+
 # US-011: Optional local summarizer backend (Ollama or heuristic)
 
 > GitHub issue [#11](https://github.com/lucaschallamel/claude-speak/issues/11) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S6_TEST_QUALITY_VERIFY
+current_stage: S7_CRITICAL_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -103,10 +103,20 @@ stages:
       - 'Changed after review: scripts/server.py, tests/test_server.py, README.md, memory-bank/systemPatterns.md (baf21f6)'
     commit: 'baf21f6'
   S6_TEST_QUALITY_VERIFY:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
+    status: completed
+    completed_at: '2026-11-14T21:45:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate, gates mapped to the project (unittest, ruff defaults, no formatter, story validator)'
+      - 'Lucas: hands-on audio, avatar and hotkey checks'
+    evidence:
+      - 'Delegated to /cu:qa-gate: PASS (unit tests, lint, story validator pass; markdown formatter not applicable)'
+      - 'Story validator first failed on 15 story files from PR #22 (missing Progress updates block; SP-015 spike fields); fixed on this branch, now 16/16'
+      - 'AC1: 87 ms replay through a logging player; Lucas heard the replay at once with real audio'
+      - 'AC2: nothing to replay without a server or a stored clip (e2e and AgainTest)'
+      - 'AC3: mid-speech replay restarted from the top within about a second and played once (Lucas, real audio)'
+      - 'AC4: covered by ReplayTest (fully made only, kept if stopped, expiry, session cap)'
+      - 'AC5: README wrapper installed and working; SUPER+Escape stop confirmed by Lucas ("stop worked"); replay key waits for 0.4.0'
+      - 'User disposition: "stop worked, continue"'
     commit: ''
   S7_CRITICAL_REVIEW:
     status: pending
@@ -142,13 +152,53 @@ closure_checks:
   deliverables_resolved: { status: pending, reason: '' }
   dod_verified: { status: pending, reason: '' }
 quality_gates:
-  lint: { status: pending, evidence: '' }
-  unit_tests: { status: pending, evidence: '' }
-  integration_tests: { status: pending, evidence: '' }
-  functional_tests: { status: pending, evidence: '' }
-  docs_quality: { status: pending, evidence: '' }
-  validators: { status: pending, evidence: '' }
-verified_claims: []
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check (default rules; the project has no linter config) on scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py: All checks passed!; python3 -m py_compile: ok'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 73 tests OK (numpy present); 69 OK + 4 skipped with numpy and kokoro_onnx blocked, as CI runs'
+  integration_tests:
+    status: pass
+    evidence: 'scratchpad e2e.sh: worktree server with real Kokoro and a logging player: no server / nothing stored -> nothing to replay; replay of a finished reply reached the player in 87 ms (same 210700-byte clip); replay mid-way through 3-chunk speech restarted from the top in 0.2 s and played all chunks once; live socket mode 600'
+  functional_tests:
+    status: pass
+    evidence: 'Hands-on on omarchy (scratchpad real.sh, worktree server through ~/.local/bin/avatar-play, bm_george): Lucas heard test A twice with the avatar mouth moving both times; test B restarted from the top within about a second and played to the end once. README wrapper installed at ~/.local/bin/claude-speak; Lucas bound SUPER+Escape in bindings.lua; "stop worked". Replay hotkey not testable until 0.4.0 (installed 0.3.3 has no again).'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). README.md and CLAUDE.md content was reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: 16/16 pass, exit 0 (after adding the Progress updates block to 15 files created in PR #22 and the SP-015 spike fields chosen by Lucas); pipeline_validator.py verify S0-S5: pass'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (73 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as CI runs it (numpy and kokoro_onnx stubbed)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (69 OK, 4 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Python linting passes on the changed files (ruff defaults)'
+    command: 'uvx ruff@0.15.4 check --no-cache scripts/server.py scripts/claude_speak.py tests/test_server.py tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'python3 ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (16/16 pass)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
 pr_readiness: { status: pending, branch: feature/US-004-instant-replay, branch_clean: false, ready_for_pr: false, evidence: [] }
 bypasses: []
 notes: ''
