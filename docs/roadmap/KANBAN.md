@@ -5,8 +5,6 @@ methodology: continuous-flow
 
 ## TODO
 
-- [ ] [[US-004-instant-replay-and-global-stop-replay]]
-
 - [ ] [[US-005-priority-lanes]]
 
 - [ ] [[US-006-speak-permission-prompts-and-alert-the]]
@@ -32,6 +30,8 @@ methodology: continuous-flow
 - [ ] [[US-016-personas]]
 
 ## DOING
+
+- [/] [[US-004-instant-replay-and-global-stop-replay]]
 
 ## DONE
 

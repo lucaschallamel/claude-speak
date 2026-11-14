@@ -20,6 +20,18 @@ replaces.
 - **Integration through env**: agent-avatar is reached only through `CLAUDE_SPEAK_PLAYER` and
   `CLAUDE_SPEAK_AVATAR_URL`.
 
+## Fork divergences from upstream code
+
+Places where the fork rewrote upstream code instead of adding to it. Expect merge conflicts here
+when pulling upstream; keep the fork's behaviour and re-apply upstream's change on top.
+
+- `Speaker._run` in `scripts/server.py` (US-004): the consumer polls the clip queue every 50 ms,
+  returns as soon as its job is cancelled, and a drain thread deletes the cancelled producer's
+  leftover files. This lets a replay or newer reply start at once instead of waiting for the chunk
+  being synthesised. Covered by `ReplayTest` in `tests/test_server.py`.
+- `Server.__init__` in `scripts/server.py` (US-004): binds the socket under umask `0o177`, so only
+  the user can connect even when it falls back to a shared `/tmp`.
+
 ## Anti-patterns
 
 - A dependency in the client.

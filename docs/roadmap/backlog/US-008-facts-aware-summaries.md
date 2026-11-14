@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 8
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #8 (filed 2026-11-07); status Draft.
+
 # US-008: Facts-aware summaries: tests, files changed, commits
 
 > GitHub issue [#8](https://github.com/lucaschallamel/claude-speak/issues/8) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

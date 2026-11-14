@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 12
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #12 (filed 2026-11-07); status Draft.
+
 # US-012: Do-not-disturb, focus-aware muting and a 'while you were away' recap
 
 > GitHub issue [#12](https://github.com/lucaschallamel/claude-speak/issues/12) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

@@ -254,5 +254,40 @@ class PromptHushTest(TempDataTest):
                 cs.cmd_worker(mock.Mock(data_dir=str(self.data)))
             send.assert_called_once()
 
+
+class AgainTest(TempDataTest):
+    def run_again(self, health, status=200, session=None):
+        args = mock.Mock(data_dir=str(self.data), session=session)
+        with mock.patch.object(cs, "server_health", return_value=health), \
+                mock.patch.object(cs, "request", return_value=(status, b"")) as request, \
+                mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch("builtins.print") as out:
+            cs.cmd_again(args)
+        ensure.assert_not_called()
+        return request, out.call_args.args[0]
+
+    def test_no_server_means_nothing_to_replay(self):
+        request, said = self.run_again(None)
+        request.assert_not_called()
+        self.assertEqual(said, "claude-speak: nothing to replay.")
+
+    def test_server_with_nothing_stored(self):
+        _, said = self.run_again({"ok": True}, status=404)
+        self.assertEqual(said, "claude-speak: nothing to replay.")
+
+    def test_server_gone_since_the_health_check(self):
+        args = mock.Mock(data_dir=str(self.data), session=None)
+        with mock.patch.object(cs, "server_health", return_value={"ok": True}), \
+                mock.patch.object(cs, "request", side_effect=ConnectionRefusedError), \
+                mock.patch("builtins.print") as out:
+            cs.cmd_again(args)
+        out.assert_called_once_with("claude-speak: nothing to replay.")
+
+    def test_replay_posts_the_session(self):
+        request, said = self.run_again({"ok": True}, session="s1")
+        request.assert_called_once_with(mock.ANY, "POST", "/replay", {"session": "s1"})
+        self.assertEqual(said, "claude-speak: replaying.")
+
+
 if __name__ == "__main__":
     unittest.main()

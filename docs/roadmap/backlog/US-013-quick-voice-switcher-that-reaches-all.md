@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 13
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #13 (filed 2026-11-07); status Draft.
+
 # US-013: Quick voice switcher that reaches all 54 Kokoro voices
 
 > GitHub issue [#13](https://github.com/lucaschallamel/claude-speak/issues/13) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

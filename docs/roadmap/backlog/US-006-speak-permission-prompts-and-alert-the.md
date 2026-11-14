@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 6
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #6 (filed 2026-11-07); status Draft.
+
 # US-006: Speak permission prompts and alert the avatar
 
 > GitHub issue [#6](https://github.com/lucaschallamel/claude-speak/issues/6) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

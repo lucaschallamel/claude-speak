@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 5
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #5 (filed 2026-11-07); status Draft.
+
 # US-005: Priority lanes: urgent speech preempts chatty speech
 
 > GitHub issue [#5](https://github.com/lucaschallamel/claude-speak/issues/5) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

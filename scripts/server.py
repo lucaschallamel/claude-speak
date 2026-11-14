@@ -16,6 +16,9 @@ Exits by itself after a period with nothing to do.
   POST /warm     play silence to wake the output device before speech is ready
   POST /synth    same body; returns the whole utterance as a WAV
   POST /stop     stop playback and clear the queue; {"session"} stops only that session
+  POST /replay   {"session"?}; say the last thing again at once: the speech playing now restarts
+                 from the top, else that session's (or the most recent) stored utterance plays
+                 without synthesis; 404 when there is none
 """
 
 from __future__ import annotations
@@ -36,7 +39,7 @@ import threading
 import time
 import urllib.request
 import wave
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -74,6 +77,13 @@ STAY_AWAKE = 3.0
 # While another session has spoken this recently, speech starts with the name
 # of the project it came from.
 OTHERS_ACTIVE = 300.0
+
+# How long a session's last utterance is kept for /replay (in memory only).
+REPLAY_KEEP = 3600.0
+# At most this many sessions' utterances are kept; the oldest goes first.
+REPLAY_SESSIONS = 32
+# A second /replay this soon after a replay started is a double tap: it is ignored.
+DOUBLE_TAP = 0.5
 
 # Dictation state file (voxtype's default). Speech stops when it leaves "idle",
 # so Claude never talks over the user.
@@ -148,6 +158,18 @@ class Job:
     voice: str
     speed: float
     cancelled: bool = False
+    clip: Clip | None = None  # on a replay: chunks already made, played before synthesising the rest
+    replay: bool = False      # queued by /replay; a newer /replay replaces it
+    made: list = field(default_factory=list)  # chunks produced so far (no lead-in)
+    rate: int = 0
+    started: float = 0.0  # when the playback loop picked it up
+
+
+@dataclass
+class Clip:
+    chunks: list  # per-chunk samples, without the lead-in silence
+    rate: int
+    stored_at: float
 
 
 class Speaker:
@@ -169,6 +191,8 @@ class Speaker:
         self.queue: list[Job] = []
         self.current: Job | None = None
         self.last_seen: dict[str, float] = {}  # session -> last /speak time
+        self.clips: dict[str, Clip] = {}  # session -> last fully synthesised utterance
+        self.last_clip = ""  # session whose clip was stored most recently
         self.proc: subprocess.Popen | None = None
         self.warm_proc: subprocess.Popen | None = None
         self.busy_until = 0.0
@@ -264,12 +288,75 @@ class Speaker:
             self.busy_until = now + 3600
             self.wake.notify()
 
+    def replay(self, session: str = "") -> bool:
+        """Play the last thing said again, ahead of the queue. False when there is nothing.
+
+        Speech still playing is the last thing said (unless another session is asked for): it
+        restarts from the top, reusing the chunks already made and synthesising only the rest.
+        Otherwise the session's stored utterance plays (default: the most recent).
+        It interrupts what is playing; queued speech plays after it.
+        """
+        with self.state_lock:
+            queued = next((j for j in self.queue if j.replay), None)
+            if queued and session in ("", queued.session):
+                return True  # a double tap: the replay already queued plays once
+            self.queue = [j for j in self.queue if not j.replay]  # another session was asked for
+            now, cur = time.time(), self.current
+            if cur and cur.replay and not cur.cancelled and session in ("", cur.session) \
+                    and now - cur.started < DOUBLE_TAP:
+                return True  # a double tap: the replay that just started keeps playing
+            # A cancelled current job was stopped or superseded; it is only finishing up.
+            if cur and not cur.cancelled and session in ("", cur.session):
+                done = max(cur.clip.chunks if cur.clip else [], list(cur.made), key=len)
+                rate = cur.rate or (cur.clip.rate if cur.clip else 0)
+                job = Job(cur.session, cur.text, cur.voice, cur.speed,
+                          clip=Clip(done, rate, now), replay=True)
+            else:
+                key = session or self.last_clip
+                clip = self.clips.get(key)
+                if not clip or now - clip.stored_at >= REPLAY_KEEP:
+                    return False
+                job = Job(key, "", "", 1.0, clip=clip, replay=True)
+            self._cancel_current()
+            self.queue.insert(0, job)
+            self.busy_until = now + 3600
+            self.wake.notify()
+            return True
+
+    def _remember(self, job: Job, chunks: list, rate: int) -> None:
+        """Keep an utterance for /replay once all its chunks are made, even if it is then stopped.
+
+        Speech stopped before all its chunks were made is not kept. A replay is kept like any
+        other speech: it is the same audio, now the last thing said.
+        """
+        whole = len(split_chunks(job.text)) or (len(job.clip.chunks) if job.clip else 0)
+        if not chunks or len(chunks) < whole:
+            return
+        with self.state_lock:
+            now = time.time()
+            self.clips = {s: c for s, c in self.clips.items() if now - c.stored_at < REPLAY_KEEP}
+            self.clips[job.session] = Clip(list(chunks), rate, now)
+            self.last_clip = job.session
+            while len(self.clips) > REPLAY_SESSIONS:
+                del self.clips[min(self.clips, key=lambda s: self.clips[s].stored_at)]
+
+    def _audio(self, job: Job):
+        """Yield (samples, rate) per chunk: chunks already made (a replay), then synthesis of the rest."""
+        done = job.clip.chunks if job.clip else []
+        for samples in done:
+            yield samples, job.clip.rate
+        for chunk in split_chunks(job.text)[len(done):]:
+            if job.cancelled:
+                return
+            yield self.synth(chunk, job.voice, job.speed)
+
     def _loop(self) -> None:
         while True:
             with self.state_lock:
                 while not self.queue:
                     self.wake.wait()
                 job = self.current = self.queue.pop(0)
+                job.started = time.time()
             try:
                 self._run(job)
             finally:
@@ -279,7 +366,6 @@ class Speaker:
                         self.busy_until = time.time()
 
     def _run(self, job: Job) -> None:
-        text, voice, speed = job.text, job.voice, job.speed
         if not self.player:
             log("no audio player found (tried afplay, pw-play, paplay, aplay, ffplay)")
             return
@@ -287,10 +373,13 @@ class Speaker:
 
         def produce():
             try:
-                for i, chunk in enumerate(split_chunks(text)):
+                for i, (samples, rate) in enumerate(self._audio(job)):
                     if job.cancelled:
                         break
-                    samples, rate = self.synth(chunk, voice, speed)
+                    job.rate = rate  # before the append: replay() reads made, then rate
+                    job.made.append(samples)
+                    # Stored as soon as the last chunk is made, before a put that may wait.
+                    self._remember(job, job.made, job.rate)
                     if i == 0:
                         lead = np.zeros(int(self.lead_in() * rate), samples.dtype)
                         samples = np.concatenate([lead, samples])
@@ -303,17 +392,32 @@ class Speaker:
             finally:
                 clips.put(None)
 
+        def drain():
+            while (path := clips.get()) is not None:
+                os.unlink(path)
+
         threading.Thread(target=produce, daemon=True).start()
-        while (path := clips.get()) is not None:
+        while True:
+            try:
+                path = clips.get(timeout=0.05)
+            except queue.Empty:
+                if job.cancelled:
+                    break
+                continue
+            if path is None:
+                return
             try:
                 with self.state_lock:
                     if job.cancelled:
-                        continue
+                        break
                     self._end_warm()
                     proc = self.proc = self._spawn(path)
                 self._reap(proc)
             finally:
                 os.unlink(path)
+        # Cancelled: don't wait for the chunk being synthesised, so the next job (a replay,
+        # a newer reply) starts now; the producer's leftovers are deleted in the background.
+        threading.Thread(target=drain, daemon=True).start()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -356,6 +460,11 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/stop":
                 speaker.stop(str(body.get("session") or ""))
                 self._json(200, {"ok": True})
+            elif self.path == "/replay":
+                if speaker.replay(str(body.get("session") or "")):
+                    self._json(200, {"ok": True})
+                else:
+                    self._json(404, {"error": "nothing to replay"})
             elif self.path == "/warm":
                 speaker.warm()
                 self._json(202, {"ok": True})
@@ -373,7 +482,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(payload)
             else:
-                self._json(400, {"error": "expected /speak or /synth with text, /warm or /stop"})
+                self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop or /replay"})
         except Exception as exc:
             self._json(500, {"error": str(exc)})
 
@@ -385,7 +494,13 @@ class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.speaker = speaker
         self.model_name = model_name
         self.last_used = time.time()
-        super().__init__(path, Handler)
+        # Only this user may connect (the socket can land in a shared /tmp). Set at bind, so
+        # there is no window; nothing else runs yet that could be affected by the umask.
+        old_umask = os.umask(0o177)
+        try:
+            super().__init__(path, Handler)
+        finally:
+            os.umask(old_umask)
 
     def touch(self) -> None:
         self.last_used = time.time()

@@ -13,7 +13,16 @@
 ## Tests and CI
 
 - `python3 -m unittest discover tests`: no model, audio or network; server deps stubbed.
+  Tests that drive `Speaker._run` for real need numpy and are skipped in CI (`skipIf` on the stub);
+  they run on any machine with numpy (omarchy has it).
+- To run the suite as CI does, block the deps: `sys.modules["numpy"] = None` (and `kokoro_onnx`)
+  before `unittest` discovery.
 - `.github/workflows/tests.yml`: Linux and macOS × Python 3.10 and 3.13; `main` requires all four.
+- Real-audio checks: run the worktree's server with its own `CLAUDE_SPEAK_DATA` (models symlinked
+  from the installed data dir) and `CLAUDE_SPEAK_PLAYER` set to a logging script or `avatar-play`,
+  so the installed plugin is untouched. Coverage when needed: `uvx --with numpy coverage run`.
+- Hotkeys: `~/.local/bin/claude-speak` is the README wrapper (newest installed version, plugin data
+  dir); SUPER+Escape stop and SUPER+SHIFT+Escape replay are bound in `~/.config/hypr/bindings.lua`.
 
 ## Install
 

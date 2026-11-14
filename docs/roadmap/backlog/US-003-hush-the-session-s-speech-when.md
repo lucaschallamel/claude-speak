@@ -13,6 +13,10 @@ last_modified: '2026-11-14'
 github_issue: 3
 ---
 
+> [!note]- Progress updates
+>
+> - **2026-11-14**: Story file created from GitHub issue #3 (filed 2026-11-07), already delivered and closed on GitHub.
+
 # US-003: Hush the session's speech when a new prompt is submitted
 
 > GitHub issue [#3](https://github.com/lucaschallamel/claude-speak/issues/3) is the tracker and discussion; this file is the spec. Keep both in step: status changes here, decisions also as issue comments.

@@ -1,0 +1,248 @@
+schema_version: 2
+story_id: US-004
+story_path: docs/roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md
+github_issue: 'lucaschallamel/claude-speak#4'
+feature_branch: feature/US-004-instant-replay
+worktree: ~/orca/workspaces/claude-speak/us-004-instant-replay-2
+review_profile: standard
+change_surface:
+  code: true
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S10_MERGE
+status: active
+status_reason: ''
+initiated_at: '2026-11-14T10:38:45Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-14T10:38:45Z'
+    evidence:
+      - 'Orca worktree us-004-instant-replay created from main 275a254'
+      - 'Branch feature/US-004-instant-replay created'
+      - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
+    commit: ''
+  S1_KICKOFF:
+    status: completed
+    completed_at: '2026-11-14T10:42:43Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: two decisions via AskUserQuestion'
+    evidence:
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-004-s1-kickoff.md'
+      - 'Challenge log: 6 entries (standard minimum 3), all resolved'
+      - 'Story file updated: ACs 2 -> 5, technical requirements, decisions section'
+      - 'Decisions posted on issue #4 (comment 6876077878)'
+    commit: '15a963a'
+  S2_PLAN:
+    status: completed
+    completed_at: '2026-11-14T10:55:14Z'
+    reviewers:
+      - 'Author (Claude Code)'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-004-s2-plan.md'
+      - 'Alternatives: 5 considered (A1-A5), all rejected with reasons'
+      - 'What could go wrong: 7 risks (W1-W7) with mitigations'
+      - 'Tests mapped to AC1-AC4; AC5 is the README, checked at S6'
+    commit: '987dd0e'
+  S3_EXECUTE:
+    status: completed
+    completed_at: '2026-11-14T19:30:00Z'
+    reviewers:
+      - 'Author (Claude Code) self-review against AC1-AC5'
+    evidence:
+      - 'Changed: scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py, README.md, CLAUDE.md'
+      - 'Unit tests: python3 -m unittest discover tests -> 58 tests OK (10 new: ReplayTest x7, AgainTest x3)'
+      - 'AC1: real Kokoro run, fake logging player: again -> player in 84 ms, same 210700-byte clip, no synthesis; ReplayTest asserts synth not called'
+      - 'AC2: e2e: no server -> nothing to replay, server not started; server with nothing stored -> nothing to replay; AgainTest covers both'
+      - 'AC3: ReplayTest.test_replay_goes_first_and_interrupts_the_current_clip'
+      - 'AC4: ReplayTest: cut-off, empty and replayed speech not kept; default = most recent session'
+      - 'AC5: README Hotkeys section; wrapper run against installed 0.3.3 -> data dir ~/.claude/plugins/data/claude-speak-claude-speak, server running. Binds not installed on the machine (documentation only).'
+      - 'Deviation from plan: none. Test-time fix: missing mock import in test_server.py.'
+    commit: '8a99ec8'
+  S4_CODE_REVIEW:
+    status: completed
+    completed_at: '2026-11-14T20:40:00Z'
+    reviewed_commit: 'f370315c0cf5bfcb0de45848f5e0da9a4b5fb5f4'
+    reviewers:
+      - 'Fresh reviewer 1: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story, git diff main...ea4d94ebd6c3bb38a7f25a2ad60f39a12835d9bc, CLAUDE.md; Verdict dictated: no'
+      - 'Author pass after fresh report 1 (/ponytail-review)'
+      - 'Fresh reviewer 2: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story, git diff ea4d94e..f370315c0cf5bfcb0de45848f5e0da9a4b5fb5f4 and main...f370315, CLAUDE.md; Verdict dictated: no'
+      - 'Author fixes after fresh report 2 (e1c21ace), not re-reviewed by a fresh reviewer'
+    evidence:
+      - 'Delegated to /cu:quality-review, round 1 on ea4d94e: PASS, 0 critical, 0 high, 2 medium, 5 low, 2 info'
+      - 'User disposition round 1: "review, assess, mitigate all issues, findings and risks, if any, with precision and care" -> all 7 fixed in f370315; measured restart latency 5.3 s -> 0.2 s led to the _run cancel fix'
+      - 'Round 2 fresh review on f370315: PASS, 0 critical, 0 high, 0 medium, 4 low, 3 info; 4 low fixed in e1c21ace, 3 info accepted with reasons'
+      - 'User disposition round 2: "continue to s5" (option [A], third fresh review declined)'
+      - 'Tests: 71 OK locally; 68 OK + 3 skipped with numpy blocked (CI); new tests fail on the previous code (checked by file swap)'
+      - 'Changed after review: scripts/server.py, tests/test_server.py (e1c21ace)'
+    commit: 'e1c21ace'
+  S5_ARCH_SEC_COMP_REVIEW:
+    status: completed
+    completed_at: '2026-11-14T21:10:00Z'
+    reviewed_commit: 'fb3e45377cf64f8cba03ee5da62e30349bb59b63'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story, git diff main...fb3e45377cf64f8cba03ee5da62e30349bb59b63 -- scripts tests README.md CLAUDE.md, CLAUDE.md, memory-bank/systemPatterns.md, memory-bank/techContext.md, README.md; Verdict dictated: no'
+      - 'Author pass after the fresh report (socket permissions verified on the live system; stale test socket found)'
+    evidence:
+      - 'Delegated to /cu:arch-review: PASS, 0 critical, 0 high, 0 medium, 3 low, 5 info; risk register R1-R5'
+      - 'trust boundary touched, not security-sensitive: POST /replay sits on the existing per-user unix socket; its only input is a session string used as a dict key; it returns no audio or text; replay audio is held in memory only, bounded, shorter-lived than the existing on-disk summary cache'
+      - 'no trust boundary touched: in the validator''s sense only; the project has no trust-boundary-paths.json, so no listed path is touched. The substantive assessment is the line above (the local socket boundary is touched, not security-sensitive). Follow-up: add trust-boundary-paths.json on main.'
+      - 'User disposition: "review, assess, mitigate all issues, findings and risks, if any, with precision and care"'
+      - 'F1/R1: fork divergences recorded in memory-bank/systemPatterns.md'
+      - 'F2/F7/R2: README states in-memory only, never on disk, up to an hour while the server runs, idle exit 30 min by default'
+      - 'F3/R3: socket bound under umask 0o177 (Server.__init__); live socket 600 (was 755); ServerSocketTest fails on previous code'
+      - 'F5/R4: REPLAY_SESSIONS = 32 cap, oldest out; test fails on previous code'
+      - 'F4, F6, F8 (reviewer): no change needed; author F8: stale test socket removed, e2e script now removes it'
+      - 'R5: accepted, same-user trust domain as transcripts and the summary cache'
+      - 'Tests: 73 OK locally; 69 OK + 4 skipped with numpy blocked (CI)'
+      - 'Changed after review: scripts/server.py, tests/test_server.py, README.md, memory-bank/systemPatterns.md (baf21f6)'
+    commit: 'baf21f6'
+  S6_TEST_QUALITY_VERIFY:
+    status: completed
+    completed_at: '2026-11-14T21:45:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate, gates mapped to the project (unittest, ruff defaults, no formatter, story validator)'
+      - 'Lucas: hands-on audio, avatar and hotkey checks'
+    evidence:
+      - 'Delegated to /cu:qa-gate: PASS (unit tests, lint, story validator pass; markdown formatter not applicable)'
+      - 'Story validator first failed on 15 story files from PR #22 (missing Progress updates block; SP-015 spike fields); fixed on this branch, now 16/16'
+      - 'AC1: 87 ms replay through a logging player; Lucas heard the replay at once with real audio'
+      - 'AC2: nothing to replay without a server or a stored clip (e2e and AgainTest)'
+      - 'AC3: mid-speech replay restarted from the top within about a second and played once (Lucas, real audio)'
+      - 'AC4: covered by ReplayTest (fully made only, kept if stopped, expiry, session cap)'
+      - 'AC5: README wrapper installed and working; SUPER+Escape stop confirmed by Lucas ("stop worked"); replay key waits for 0.4.0'
+      - 'User disposition: "stop worked, continue"'
+    commit: '3bcf23c'
+  S7_CRITICAL_REVIEW:
+    status: completed
+    completed_at: '2026-11-14T22:20:00Z'
+    reviewed_commit: '3f92752ea2a050fc90d73408354ff21b6b9a655c'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/dod-verify.md (DoD Level 1 from framework-authoring/resources/definition-of-done.md), fresh-context-review.md, story, git diff main...3f92752ea2a050fc90d73408354ff21b6b9a655c, pipeline_validator.py status output, the pipeline YAML, CLAUDE.md; Verdict dictated: no'
+      - 'Author pass after the fresh report'
+    evidence:
+      - 'Delegated to /cu:dod-verify: WARN; AC clauses 18 PASS, 1 WARN (AC3c double tap); DoD 17 PASS, 5 WARN, 5 SKIP; no FAIL'
+      - 'Challenge log: 7 entries from 2 perspectives (user, maintainer/upstream merger), all assessed'
+      - 'User disposition: "review, assess, mitigate all issues, findings and risks, if any, with precision and care"'
+      - 'AC3c: double tap within 0.5 s of a replay starting is ignored (DOUBLE_TAP, Job.started); test fails on the previous code; a later press restarts (tested)'
+      - 'Docs drift: /replay docstring now states the restart-what-is-playing default'
+      - 'Handler 200/404 for /replay: ReplayEndpointTest over a real unix socket'
+      - 'CR2 I001 import order fixed; ruff E4,E7,E9,F,I clean on changed files'
+      - 'VC1: S2 commit 987dd0e recorded'
+      - 'TE1 coverage measured (coverage.py, branch): all lines added by US-004 covered except job.started in _loop (loop thread is not run by unit tests, pre-existing); poll keep-waiting branch now covered by a new test. Whole files 42% client / 63% server, reflecting older untested code (hooks, main, download).'
+      - 'VC3 version bump: decided not in this story; release per milestone (Lucas, 2026-11-07); 0.4.0 after #5 brings again and the replay hotkey to installs'
+      - 'TE4 CI on the PR: checked at S10'
+      - 'Scope note: the 15 story files changed at S6 (validator fixes for PR #22) stay in this PR and are named in its description'
+      - 'CQ7 principle tags: not a project convention; skipped'
+      - 'Tests: 78 OK locally; 73 OK + 5 skipped with numpy blocked (CI)'
+      - 'Changed after review: scripts/server.py, tests/test_server.py (e775aa1)'
+    commit: 'e775aa1'
+  S8_CAPTURE:
+    status: completed
+    completed_at: '2026-11-14T22:50:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:dev-journal, /cu:memory-update, /cu:readme-update (invoked in that order)'
+    evidence:
+      - 'docs/dev-journal/2026/11/2026-11-14-us-004-instant-replay.md'
+      - 'Memory bank: activeContext.md, progress.md, techContext.md modified this run; systemPatterns.md at S5; archive/activeContext-archive.md created'
+      - 'README update: docs/roadmap/README.md created; README.md and docs/dev-journal/README.md reviewed, current'
+      - 'prune-memory-bank.py: 1 block rolled; --check exit 0 (sizes not checked by the script: no budget table readable; bank is about 1,500 words)'
+      - 'check-memory-bank-consistency.py (COPPER_DOCS_ROOT=.): PASS'
+      - 'User hold disposition: "continue to s9" (option [A])'
+    commit: 'd955fcf'
+  S9_CLOSE:
+    status: completed
+    completed_at: '2026-11-14T23:05:00Z'
+    evidence:
+      - 'Delegated to /cu:story-update: AC1-AC5 ticked, S9 and S4-S8 progress entries added; status stays In Progress (Done at merge, TD-173)'
+      - '/cu:readme-update ran at S8 (docs/roadmap/README.md created); no further README changes at S9'
+      - 'Closure checks: dev_journal, memory_bank, readme_review, commit_evidence, pr_readiness, deliverables_resolved, dod_verified pass; backlog_status and board_status flip post-merge'
+      - 'Close docs committed (no push yet): docs(US-004): S9 close documentation'
+      - 'Tests before commit: 78 OK'
+    commit: ''
+  S10_MERGE:
+    status: pending
+    completed_at: ''
+    evidence: []
+    commit: ''
+closure_checks:
+  backlog_status: { status: pending, reason: '' }
+  board_status: { status: pending, reason: '' }
+  dev_journal:
+    status: pass
+    reason: 'docs/dev-journal/2026/11/2026-11-14-us-004-instant-replay.md'
+  memory_bank:
+    status: pass
+    reason: '/cu:memory-update: activeContext.md, progress.md, techContext.md updated; systemPatterns.md updated at S5; projectbrief.md and productContext.md reviewed, unchanged; COPPER setup and 2026-11-13 blocks rolled to archive/activeContext-archive.md (newest first); prune --check exit 0; consistency check PASS'
+  readme_review:
+    status: pass
+    reason: '/cu:readme-update: README.md (Instant replay, Hotkeys) updated during S3-S5 and current; docs/dev-journal/README.md current; docs/roadmap/README.md created (Lucas chose docs/roadmap only; no new README in upstream scripts/ and tests/, memory-bank/ defined by COPPER rules)'
+  commit_evidence:
+    status: pass
+    reason: 'Conventional commits per stage on feature/US-004-instant-replay; S1 15a963a, S2 987dd0e, S3 8a99ec8, S4 e1c21ace, S5 baf21f6, S6 3bcf23c, S7 e775aa1, S8 d955fcf, S9 close-docs commit'
+  pr_readiness:
+    status: pass
+    reason: 'Branch clean after the S9 commit; 78 tests OK; PR created at S10'
+  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved:
+    status: pass
+    reason: 'AC1-AC5 ticked in the story file with evidence at S6/S7; technical requirements met; follow-ups recorded (trust-boundary-paths.json, release 0.4.0 after #5)'
+  dod_verified:
+    status: pass
+    reason: '/cu:dod-verify at S7: no FAIL; WARN items mitigated or decided (see S7 evidence)'
+quality_gates:
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check (default rules; the project has no linter config) on scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py: All checks passed!; python3 -m py_compile: ok'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 73 tests OK (numpy present); 69 OK + 4 skipped with numpy and kokoro_onnx blocked, as CI runs'
+  integration_tests:
+    status: pass
+    evidence: 'scratchpad e2e.sh: worktree server with real Kokoro and a logging player: no server / nothing stored -> nothing to replay; replay of a finished reply reached the player in 87 ms (same 210700-byte clip); replay mid-way through 3-chunk speech restarted from the top in 0.2 s and played all chunks once; live socket mode 600'
+  functional_tests:
+    status: pass
+    evidence: 'Hands-on on omarchy (scratchpad real.sh, worktree server through ~/.local/bin/avatar-play, bm_george): Lucas heard test A twice with the avatar mouth moving both times; test B restarted from the top within about a second and played to the end once. README wrapper installed at ~/.local/bin/claude-speak; Lucas bound SUPER+Escape in bindings.lua; "stop worked". Replay hotkey not testable until 0.4.0 (installed 0.3.3 has no again).'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). README.md and CLAUDE.md content was reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: 16/16 pass, exit 0 (after adding the Progress updates block to 15 files created in PR #22 and the SP-015 spike fields chosen by Lucas); pipeline_validator.py verify S0-S5: pass'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (73 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as CI runs it (numpy and kokoro_onnx stubbed)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (69 OK, 4 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Python linting passes on the changed files (ruff defaults)'
+    command: 'uvx ruff@0.15.4 check --no-cache scripts/server.py scripts/claude_speak.py tests/test_server.py tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'python3 ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (16/16 pass)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
+pr_readiness: { status: pending, branch: feature/US-004-instant-replay, branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: ''
