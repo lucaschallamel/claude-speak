@@ -143,10 +143,16 @@ stages:
       - 'Changed after review: scripts/server.py, tests/test_server.py (e775aa1)'
     commit: 'e775aa1'
   S8_CAPTURE:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
+    status: completed
+    completed_at: '2026-11-14T22:50:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:dev-journal, /cu:memory-update, /cu:readme-update (invoked in that order)'
+    evidence:
+      - 'Dev-journal: docs/dev-journal/2026/11/2026-11-14-us-004-instant-replay.md (exists)'
+      - 'Memory bank: activeContext.md, progress.md, techContext.md modified this run; systemPatterns.md at S5; archive/activeContext-archive.md created'
+      - 'README update: docs/roadmap/README.md created; README.md and docs/dev-journal/README.md reviewed, current'
+      - 'prune-memory-bank.py: 1 block rolled; --check exit 0 (sizes not checked by the script: no budget table readable; bank is about 1,500 words)'
+      - 'check-memory-bank-consistency.py (COPPER_DOCS_ROOT=.): PASS'
     commit: ''
   S9_CLOSE:
     status: pending
@@ -161,9 +167,15 @@ stages:
 closure_checks:
   backlog_status: { status: pending, reason: '' }
   board_status: { status: pending, reason: '' }
-  dev_journal: { status: pending, reason: '' }
-  memory_bank: { status: pending, reason: '' }
-  readme_review: { status: pending, reason: '' }
+  dev_journal:
+    status: pass
+    reason: 'docs/dev-journal/2026/11/2026-11-14-us-004-instant-replay.md (via /cu:dev-journal)'
+  memory_bank:
+    status: pass
+    reason: '/cu:memory-update: activeContext.md, progress.md, techContext.md updated; systemPatterns.md updated at S5; projectbrief.md and productContext.md reviewed, unchanged; COPPER setup and 2026-11-13 blocks rolled to archive/activeContext-archive.md (newest first); prune --check exit 0; consistency check PASS'
+  readme_review:
+    status: pass
+    reason: '/cu:readme-update: README.md (Instant replay, Hotkeys) updated during S3-S5 and current; docs/dev-journal/README.md current; docs/roadmap/README.md created (Lucas chose docs/roadmap only; no new README in upstream scripts/ and tests/, memory-bank/ defined by COPPER rules)'
   commit_evidence: { status: pending, reason: '' }
   pr_readiness: { status: pending, reason: '' }
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
