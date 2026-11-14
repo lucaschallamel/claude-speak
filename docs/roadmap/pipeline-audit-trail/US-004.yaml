@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S4_CODE_REVIEW
+current_stage: S5_ARCH_SEC_COMP_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -65,11 +65,22 @@ stages:
       - 'Deviation from plan: none. Test-time fix: missing mock import in test_server.py.'
     commit: '8a99ec8'
   S4_CODE_REVIEW:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
-    commit: ''
+    status: completed
+    completed_at: '2026-11-14T20:40:00Z'
+    reviewed_commit: 'f370315c0cf5bfcb0de45848f5e0da9a4b5fb5f4'
+    reviewers:
+      - 'Fresh reviewer 1: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story, git diff main...ea4d94ebd6c3bb38a7f25a2ad60f39a12835d9bc, CLAUDE.md; Verdict dictated: no'
+      - 'Author pass after fresh report 1 (/ponytail-review)'
+      - 'Fresh reviewer 2: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story, git diff ea4d94e..f370315c0cf5bfcb0de45848f5e0da9a4b5fb5f4 and main...f370315, CLAUDE.md; Verdict dictated: no'
+      - 'Author fixes after fresh report 2 (e1c21ace), not re-reviewed by a fresh reviewer'
+    evidence:
+      - 'Delegated to /cu:quality-review, round 1 on ea4d94e: PASS, 0 critical, 0 high, 2 medium, 5 low, 2 info'
+      - 'User disposition round 1: "review, assess, mitigate all issues, findings and risks, if any, with precision and care" -> all 7 fixed in f370315; measured restart latency 5.3 s -> 0.2 s led to the _run cancel fix'
+      - 'Round 2 fresh review on f370315: PASS, 0 critical, 0 high, 0 medium, 4 low, 3 info; 4 low fixed in e1c21ace, 3 info accepted with reasons'
+      - 'User disposition round 2: "continue to s5" (option [A], third fresh review declined)'
+      - 'Tests: 71 OK locally; 68 OK + 3 skipped with numpy blocked (CI); new tests fail on the previous code (checked by file swap)'
+      - 'Changed after review: scripts/server.py, tests/test_server.py (e1c21ace)'
+    commit: 'e1c21ace'
   S5_ARCH_SEC_COMP_REVIEW:
     status: pending
     completed_at: ''
