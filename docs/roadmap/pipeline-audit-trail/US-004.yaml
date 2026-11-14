@@ -117,7 +117,7 @@ stages:
       - 'AC4: covered by ReplayTest (fully made only, kept if stopped, expiry, session cap)'
       - 'AC5: README wrapper installed and working; SUPER+Escape stop confirmed by Lucas ("stop worked"); replay key waits for 0.4.0'
       - 'User disposition: "stop worked, continue"'
-    commit: ''
+    commit: '3bcf23c'
   S7_CRITICAL_REVIEW:
     status: pending
     completed_at: ''
