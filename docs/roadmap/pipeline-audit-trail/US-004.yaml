@@ -13,10 +13,10 @@ change_surface:
   security_sensitive: false
   compliance_sensitive: false
 current_stage: S10_MERGE
-status: active
+status: completed
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
-completed_at: ''
+completed_at: '2026-11-14T12:06:36Z'
 stages:
   S0_SELECT:
     status: completed
@@ -164,15 +164,32 @@ stages:
       - 'Closure checks: dev_journal, memory_bank, readme_review, commit_evidence, pr_readiness, deliverables_resolved, dod_verified pass; backlog_status and board_status flip post-merge'
       - 'Close docs committed (no push yet): docs(US-004): S9 close documentation'
       - 'Tests before commit: 78 OK'
-    commit: ''
+    commit: '3dd90c0'
   S10_MERGE:
-    status: pending
-    completed_at: ''
-    evidence: []
-    commit: ''
+    status: completed
+    completed_at: '2026-11-14T12:06:36Z'
+    pr_head: '82996a6b1ea56a8e1a45a3ca31c9ae2b6e6e966b'
+    pr_url: 'https://github.com/lucaschallamel/claude-speak/pull/23'
+    merge_approval:
+      quote: 'Approved, merge the PR'
+      at: '2026-11-14T12:06:26Z'
+      head: '82996a6b1ea56a8e1a45a3ca31c9ae2b6e6e966b'
+    evidence:
+      - 'Battery on 82996a6 before push: 78 passed, 0 failed (10 sequential and 12 parallel runs under load); CI mode 73 passed, 5 skipped; ruff E4,E7,E9,F,I clean; story validator 16/16; pipeline audit pass; exit 0'
+      - 'The first battery run on 3dd90c0 had one flaky failure (temp-file check against a shared /tmp); fixed in 82996a6 (private temp dir, polled cleanup) before push'
+      - 'Pushed feature/US-004-instant-replay; PR #23 created with /cu:mr-create (gates 0-6 pass; secret scan: only co-author noreply addresses and the intended closes #4)'
+      - 'CI on PR #23 at 82996a6: unittest ubuntu/macos x 3.10/3.13, 4/4 pass'
+      - 'Before merge: PR head 82996a6 = approved head; origin/main had not moved (HEAD..origin/main = 0); MERGEABLE CLEAN'
+      - 'Merged on the platform: gh pr merge 23 --squash --match-head-commit 82996a6 (the repository convention is squash merge) -> ea64f0a4f9bb0eb311a9ddd42b587654e6863cf5; issue #4 closed; branch deleted'
+      - 'commit_count: 18'
+      - 'Changed after review: scripts/server.py, tests/test_server.py, README.md, memory-bank/systemPatterns.md, docs/dev-journal/2026/11/2026-11-14-us-004-instant-replay.md, docs/roadmap/README.md, docs/roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md, docs/roadmap/pipeline-audit-trail/US-004.yaml, memory-bank/activeContext.md, memory-bank/archive/activeContext-archive.md, memory-bank/progress.md, memory-bank/techContext.md'
+      - 'Those changes came from: S5 mitigations baf21f6 (after S5 review fb3e453), S7 fixes e775aa1 and test hardening 82996a6 (after S7 review 3f92752), S8-S9 bookkeeping'
+      - 'Ancestry check unverified: the squash merge leaves the reviewed commits off main, so pipeline_validator verify S10_MERGE ancestry is expected to fail; recorded here, pr_head not changed (Rule 07 Control 1)'
+      - 'Post-merge close: chore/US-004-close from main ea64f0a, story Done, card DONE, pipeline completed, ROADMAP ticked; its own PR needs a second approval (TD-205)'
+    commit: 'ea64f0a'
 closure_checks:
-  backlog_status: { status: pending, reason: '' }
-  board_status: { status: pending, reason: '' }
+  backlog_status: { status: pass, reason: 'Story status Done (close PR)' }
+  board_status: { status: pass, reason: 'KANBAN card in DONE (close PR)' }
   dev_journal:
     status: pass
     reason: 'docs/dev-journal/2026/11/2026-11-14-us-004-instant-replay.md'
@@ -188,7 +205,7 @@ closure_checks:
   pr_readiness:
     status: pass
     reason: 'Branch clean after the S9 commit; 78 tests OK; PR created at S10'
-  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  pr_creation: { status: pass, reason: 'PR #23 https://github.com/lucaschallamel/claude-speak/pull/23' }
   deliverables_resolved:
     status: pass
     reason: 'AC1-AC5 ticked in the story file with evidence at S6/S7; technical requirements met; follow-ups recorded (trust-boundary-paths.json, release 0.4.0 after #5)'
@@ -243,6 +260,12 @@ verified_claims:
     exit_code: 0
     scope: 'project'
     category: 'validator'
-pr_readiness: { status: pending, branch: feature/US-004-instant-replay, branch_clean: false, ready_for_pr: false, evidence: [] }
+pr_readiness:
+  status: pass
+  branch: feature/US-004-instant-replay
+  branch_clean: true
+  ready_for_pr: true
+  evidence:
+    - 'Clean tree at 82996a6, pushed, PR #23 merged'
 bypasses: []
 notes: ''
