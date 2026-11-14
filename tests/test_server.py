@@ -481,9 +481,16 @@ class LanesTest(unittest.TestCase):
         sp = speaker()
         now = time.time()
         sp.queue = [server.Job("a", "old", "v", 1.0, priority=server.LOW, at=now - 6),
-                    server.Job("b", "fresh", "v", 1.0, priority=server.LOW, at=now - 1)]
+                    server.Job("b", "fresh", "v", 1.0, priority=server.LOW, at=now - 1),
+                    server.Job("c", "old reply", "v", 1.0, priority=server.NORMAL, at=now - 60),
+                    server.Job("d", "old question", "v", 1.0, priority=0, at=now - 60),
+                    server.Job("e", "end", "v", 1.0, at=now)]
+        taken = []
         with sp.state_lock:
-            self.assertEqual(sp._next().text, "fresh")
+            while not taken or taken[-1] != "end":  # stops at "end" even if too much is dropped
+                taken.append(sp._next().text)
+        # Only status lines go stale: a resumed reply keeps its original hook time.
+        self.assertEqual(taken, ["fresh", "old reply", "old question", "end"])
 
     def test_dropping_the_last_job_ends_busy(self):
         sp = speaker()

@@ -219,7 +219,7 @@ The client (`scripts/claude_speak.py`) is stdlib-only Python. The voice server (
 - **Priority lanes**: with several sessions talking, a question goes ahead of reply summaries,
   which go ahead of status lines. Speech from another session in a higher lane cuts a status
   line at once; a reply finishes the sentence group it is on, then resumes after the question
-  without repeating anything. A status line not heard within 5 seconds is dropped, and a
+  without repeating anything. A status line that hasn't started within 5 seconds is dropped, and a
   session's own status line never interrupts its question or reply. A replay still goes first.
 
 ### Hotkeys

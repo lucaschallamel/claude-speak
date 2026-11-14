@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S4_CODE_REVIEW
+current_stage: S5_ARCH_SEC_COMP_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -70,8 +70,29 @@ stages:
       - 'Deviation log: stale drop moved into a _next helper; added busy_until reset when the dropped status line was the last job (else /health stays busy and blocks interjections; found while coding, not in the plan); hook_time is a module function for testing'
       - 'Docs: README fork additions (Priority lanes), CLAUDE.md server paragraph, server.py docstring, memory-bank/systemPatterns.md fork divergences'
       - 'S1 open challenge 7 (latency under synth_lock) resolved by measurement'
+      - 'Branch pushed to origin after the checkpoint commit'
+    commit: 'c5b4be7'
+  S4_CODE_REVIEW:
+    status: completed
+    completed_at: '2026-11-14T16:20:46Z'
+    reviewed_commit: 'c5b4be7427fc6521636505854afde3acaba7c242'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff main...c5b4be7, CLAUDE.md; ran the test suite and one scratch experiment (fake player); Verdict dictated: no'
+      - 'Author pass after the fresh report (1 Info finding added)'
+    evidence:
+      - 'Delegated to /cu:quality-review as a fresh-context review: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 3 low, 3 info (5 fresh, 1 author)'
+      - 'User disposition: [C] fix before S5 ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'F1 Low fixed: .github/workflows/tests.yml installs numpy>=2,<3 on the Python 3.13 jobs, so CI runs the 8 numpy-only playback tests (3 resume, 5 US-004 replay) on Linux and macOS; 3.10 jobs stay bare to keep covering the stub path; job names unchanged. CI result verified at S10 on the PR'
+      - 'F2 Low fixed: stale test now asserts old normal and urgent jobs are kept, with an end sentinel so a regression fails instead of blocking'
+      - 'F3 Low fixed: client worker stale test asserts urgent is sent'
+      - 'Mutation check: both regressions injected (lane check removed in _next; worker guard priority != "normal"): 2 tests FAILED in 0.003 s; sources restored with git checkout'
+      - 'Found while mitigating: the first version of the F2 test hung forever under the injected regression (third _next on an empty queue); restructured with a sentinel before commit'
+      - 'F4 Info accepted: an in-flight chunk is re-synthesised on resume; synthesis cannot be interrupted, so keeping it would only shorten the resume, at the cost of a cross-job handoff race; same as US-004 restart'
+      - 'F5 Info fixed: README now says "hasn''t started within 5 seconds"'
+      - 'F6 Info (author) accepted: a reply preempted by a question that is then cancelled pauses at the boundary and resumes at once; undoing it would need preempt provenance on every cancel path'
+      - 'After fixes: python3 -m unittest discover tests 99 passed; numpy blocked 91 passed, 8 skipped; ruff clean'
     commit: ''
-  S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S5_ARCH_SEC_COMP_REVIEW:
     { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY:

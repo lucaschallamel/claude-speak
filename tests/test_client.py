@@ -297,8 +297,9 @@ class LanesTest(TempDataTest):
     def test_a_status_line_summarised_too_slowly_is_dropped(self):
         send, _ = self.work("low", cs.STALE_LOW + 1)
         send.assert_not_called()
-        send, _ = self.work("normal", cs.STALE_LOW + 1)  # replies are never stale
-        send.assert_called_once()
+        for priority in ("normal", "urgent"):  # replies and questions are never stale
+            send, _ = self.work(priority, cs.STALE_LOW + 1)
+            send.assert_called_once()
 
     def test_the_worker_sends_the_lane_and_the_hook_time(self):
         send, job = self.work("low", 1)
