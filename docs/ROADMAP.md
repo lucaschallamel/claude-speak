@@ -18,7 +18,7 @@ Never talk over Lucas. Release 0.4.0.
 
 - [x] [US-002](roadmap/backlog/US-002-barge-in.md) ([#2](https://github.com/lucaschallamel/claude-speak/issues/2)): Barge-in: stop speaking when dictation starts
 - [x] [US-003](roadmap/backlog/US-003-hush-the-session-s-speech-when.md) ([#3](https://github.com/lucaschallamel/claude-speak/issues/3)): Hush the session's speech when a new prompt is submitted
-- [ ] [US-004](roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md) ([#4](https://github.com/lucaschallamel/claude-speak/issues/4)): Instant replay and global stop/replay hotkeys
+- [x] [US-004](roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md) ([#4](https://github.com/lucaschallamel/claude-speak/issues/4)): Instant replay and global stop/replay hotkeys
 - [ ] [US-005](roadmap/backlog/US-005-priority-lanes.md) ([#5](https://github.com/lucaschallamel/claude-speak/issues/5)): Priority lanes: urgent speech preempts chatty speech
 
 ## 3 Characters

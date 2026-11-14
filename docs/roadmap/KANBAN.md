@@ -31,9 +31,9 @@ methodology: continuous-flow
 
 ## DOING
 
-- [/] [[US-004-instant-replay-and-global-stop-replay]]
-
 ## DONE
+
+- [x] [[US-004-instant-replay-and-global-stop-replay]]
 
 - [x] [[US-001-unit-test-suite-for-the-client]]
 
