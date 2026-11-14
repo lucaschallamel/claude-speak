@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S3_EXECUTE
+current_stage: S4_CODE_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -50,11 +50,20 @@ stages:
       - 'Tests mapped to AC1-AC4; AC5 is the README, checked at S6'
     commit: ''
   S3_EXECUTE:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
-    commit: ''
+    status: completed
+    completed_at: '2026-11-14T19:30:00Z'
+    reviewers:
+      - 'Author (Claude Code) self-review against AC1-AC5'
+    evidence:
+      - 'Changed: scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py, README.md, CLAUDE.md'
+      - 'Unit tests: python3 -m unittest discover tests -> 58 tests OK (10 new: ReplayTest x7, AgainTest x3)'
+      - 'AC1: real Kokoro run, fake logging player: again -> player in 84 ms, same 210700-byte clip, no synthesis; ReplayTest asserts synth not called'
+      - 'AC2: e2e: no server -> nothing to replay, server not started; server with nothing stored -> nothing to replay; AgainTest covers both'
+      - 'AC3: ReplayTest.test_replay_goes_first_and_interrupts_the_current_clip'
+      - 'AC4: ReplayTest: cut-off, empty and replayed speech not kept; default = most recent session'
+      - 'AC5: README Hotkeys section; wrapper run against installed 0.3.3 -> data dir ~/.claude/plugins/data/claude-speak-claude-speak, server running. Binds not installed on the machine (documentation only).'
+      - 'Deviation from plan: none. Test-time fix: missing mock import in test_server.py.'
+    commit: '8a99ec8'
   S4_CODE_REVIEW:
     status: pending
     completed_at: ''
