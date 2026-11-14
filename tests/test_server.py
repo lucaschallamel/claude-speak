@@ -3,6 +3,7 @@
 Run: python3 -m unittest discover tests
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -10,8 +11,8 @@ import threading
 import time
 import types
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -27,6 +28,7 @@ for name in ("numpy", "kokoro_onnx"):
         stub.ndarray = object
         sys.modules[name] = stub
 
+import claude_speak  # noqa: E402  (stdlib only; its unix-socket HTTP connection)
 import server  # noqa: E402
 
 
@@ -226,6 +228,26 @@ class ReplayTest(unittest.TestCase):
         sp.replay()
         self.assertEqual([j.replay for j in sp.queue], [True, False])
 
+    def test_a_double_tap_after_the_replay_started_is_ignored(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["a1", "a2"])
+        sp.replay()
+        sp.current = sp.queue.pop(0)
+        sp.current.started = time.time()  # just picked up by the playback loop
+        self.assertTrue(sp.replay())
+        self.assertFalse(sp.current.cancelled)
+        self.assertEqual(sp.queue, [])
+
+    def test_a_later_press_restarts_the_replay(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["a1", "a2"])
+        sp.replay()
+        sp.current = sp.queue.pop(0)
+        sp.current.started = time.time() - server.DOUBLE_TAP - 0.1
+        self.assertTrue(sp.replay())
+        self.assertTrue(sp.current.cancelled)
+        self.assertEqual(sp.queue[0].clip.chunks, ["a1", "a2"])
+
     def test_clips_older_than_the_keep_time_are_not_replayed(self):
         sp = speaker()
         self.remembered(sp, "a")
@@ -273,6 +295,26 @@ class ReplayTest(unittest.TestCase):
         release.set()
         time.sleep(0.2)
         self.assertEqual(set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav")), before)
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_playback_waits_for_a_slow_chunk_when_nothing_is_cancelled(self):
+        np = server.np
+        sp = speaker()
+        job = server.Job("a", "One sentence of a longer reply, padded out. " * 12, "bm_george", 1.0)
+        n = len(server.split_chunks(job.text))
+        self.assertGreater(n, 1)
+        calls = []
+
+        def synth(*_):
+            if calls:
+                time.sleep(0.2)  # later chunks take several 50 ms polls to make
+            calls.append(1)
+            return np.ones(10, np.float32), 24000
+        played = []
+        sp.player, sp.lead_in, sp.synth = ["true"], lambda: 0.0, synth
+        sp._spawn, sp._reap = played.append, lambda proc: None
+        sp._run(job)
+        self.assertEqual(len(played), n)
 
     @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
     def test_files_queued_by_a_cancelled_job_are_deleted(self):
@@ -348,6 +390,36 @@ class ServerSocketTest(unittest.TestCase):
             self.assertEqual(os.umask(old), old, "umask restored after bind")
         finally:
             srv.server_close()
+
+
+class ReplayEndpointTest(unittest.TestCase):
+    """POST /replay over a real unix socket, with a stand-in speaker."""
+
+    def post(self, has_clip, body):
+        fake = mock.Mock()
+        fake.replay.return_value = has_clip
+        path = os.path.join(tempfile.mkdtemp(), "s.sock")
+        srv = server.Server(path, fake, "model")
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            conn = claude_speak._UnixConnection(Path(path), 5)
+            conn.request("POST", "/replay", body=json.dumps(body),
+                         headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            return resp.status, json.loads(resp.read()), fake
+        finally:
+            srv.shutdown()
+            srv.server_close()
+
+    def test_replays_the_session_asked_for(self):
+        status, body, fake = self.post(True, {"session": "s1"})
+        self.assertEqual((status, body), (200, {"ok": True}))
+        fake.replay.assert_called_once_with("s1")
+
+    def test_nothing_to_replay_is_404(self):
+        status, body, fake = self.post(False, {})
+        self.assertEqual((status, body), (404, {"error": "nothing to replay"}))
+        fake.replay.assert_called_once_with("")
 
 
 class WatchDictationTest(unittest.TestCase):

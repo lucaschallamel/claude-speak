@@ -16,8 +16,9 @@ Exits by itself after a period with nothing to do.
   POST /warm     play silence to wake the output device before speech is ready
   POST /synth    same body; returns the whole utterance as a WAV
   POST /stop     stop playback and clear the queue; {"session"} stops only that session
-  POST /replay   {"session"?}; replay that session's last utterance, or the most recent one,
-                 at once and without synthesis; 404 when there is none
+  POST /replay   {"session"?}; say the last thing again at once: the speech playing now restarts
+                 from the top, else that session's (or the most recent) stored utterance plays
+                 without synthesis; 404 when there is none
 """
 
 from __future__ import annotations
@@ -81,6 +82,8 @@ OTHERS_ACTIVE = 300.0
 REPLAY_KEEP = 3600.0
 # At most this many sessions' utterances are kept; the oldest goes first.
 REPLAY_SESSIONS = 32
+# A second /replay this soon after a replay started is a double tap: it is ignored.
+DOUBLE_TAP = 0.5
 
 # Dictation state file (voxtype's default). Speech stops when it leaves "idle",
 # so Claude never talks over the user.
@@ -159,6 +162,7 @@ class Job:
     replay: bool = False      # queued by /replay; a newer /replay replaces it
     made: list = field(default_factory=list)  # chunks produced so far (no lead-in)
     rate: int = 0
+    started: float = 0.0  # when the playback loop picked it up
 
 
 @dataclass
@@ -298,6 +302,9 @@ class Speaker:
                 return True  # a double tap: the replay already queued plays once
             self.queue = [j for j in self.queue if not j.replay]  # another session was asked for
             now, cur = time.time(), self.current
+            if cur and cur.replay and not cur.cancelled and session in ("", cur.session) \
+                    and now - cur.started < DOUBLE_TAP:
+                return True  # a double tap: the replay that just started keeps playing
             # A cancelled current job was stopped or superseded; it is only finishing up.
             if cur and not cur.cancelled and session in ("", cur.session):
                 done = max(cur.clip.chunks if cur.clip else [], list(cur.made), key=len)
@@ -349,6 +356,7 @@ class Speaker:
                 while not self.queue:
                     self.wake.wait()
                 job = self.current = self.queue.pop(0)
+                job.started = time.time()
             try:
                 self._run(job)
             finally:
