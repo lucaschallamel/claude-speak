@@ -6,3 +6,4 @@
 - Manifests changed: `claude plugin validate .`. Known failure: the name `claude-speak` is reserved (`claude-` prefix), so that error is expected; any other error is real. Rename decision is still open. Release: bump `version` in `.claude-plugin/plugin.json`.
 - Installed plugin runs from `~/.claude/plugins/cache/...`, not this checkout: test with `claude --plugin-dir .`.
 - Update docs per `mem:conventions`, commit on the branch, push + PR, wait for CI, ask before merge.
+- When a story lands: tick its ACs and set `status` in its story file, move its Kanban card, update `memory-bank/activeContext.md` and `progress.md`.
