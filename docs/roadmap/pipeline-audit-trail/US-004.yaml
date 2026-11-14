@@ -3,7 +3,7 @@ story_id: US-004
 story_path: docs/roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md
 github_issue: 'lucaschallamel/claude-speak#4'
 feature_branch: feature/US-004-instant-replay
-worktree: ~/orca/workspaces/claude-speak/us-004-instant-replay
+worktree: ~/orca/workspaces/claude-speak/us-004-instant-replay-2
 review_profile: standard
 change_surface:
   code: true
@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S2_PLAN
+current_stage: S3_EXECUTE
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -39,10 +39,15 @@ stages:
       - 'Decisions posted on issue #4 (comment 6876077878)'
     commit: '15a963a'
   S2_PLAN:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
+    status: completed
+    completed_at: '2026-11-14T10:55:14Z'
+    reviewers:
+      - 'Author (Claude Code)'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-004-s2-plan.md'
+      - 'Alternatives: 5 considered (A1-A5), all rejected with reasons'
+      - 'What could go wrong: 7 risks (W1-W7) with mitigations'
+      - 'Tests mapped to AC1-AC4; AC5 is the README, checked at S6'
     commit: ''
   S3_EXECUTE:
     status: pending
