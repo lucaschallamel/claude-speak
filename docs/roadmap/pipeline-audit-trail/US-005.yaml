@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S2_PLAN
+current_stage: S3_EXECUTE
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -39,8 +39,19 @@ stages:
       - 'Challenge log: 7 entries (standard minimum 3); 6 resolved, 1 open (question latency, measured in S3/S6)'
       - 'Story file updated: scope to cross-session, ACs 2 -> 5, technical requirements, decisions section'
       - 'Decisions posted on issue #5 (comment 6878349126)'
+      - 'Branch pushed to origin after the checkpoint commit'
+    commit: 'b6a0539'
+  S2_PLAN:
+    status: completed
+    completed_at: '2026-11-14T14:00:51Z'
+    reviewers:
+      - 'Author (Claude Code), inline per cu-pipe S2'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-005-s2-plan.md'
+      - 'Alternatives: 5 considered and rejected (heapq/lanes, client-side stop, re-synthesis resume, cut-all, pre-synthesis)'
+      - 'What could go wrong: 8 risks (W1-W8) each with a check; test plan maps every AC'
+      - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
     commit: ''
-  S2_PLAN: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S5_ARCH_SEC_COMP_REVIEW:
