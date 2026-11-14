@@ -291,8 +291,13 @@ class Speaker:
         It interrupts what is playing; queued speech plays after it.
         """
         with self.state_lock:
+            queued = next((j for j in self.queue if j.replay), None)
+            if queued and session in ("", queued.session):
+                return True  # a double tap: the replay already queued plays once
+            self.queue = [j for j in self.queue if not j.replay]  # another session was asked for
             now, cur = time.time(), self.current
-            if cur and session in ("", cur.session):
+            # A cancelled current job was stopped or superseded; it is only finishing up.
+            if cur and not cur.cancelled and session in ("", cur.session):
                 done = max(cur.clip.chunks if cur.clip else [], list(cur.made), key=len)
                 rate = cur.rate or (cur.clip.rate if cur.clip else 0)
                 job = Job(cur.session, cur.text, cur.voice, cur.speed,
@@ -304,19 +309,19 @@ class Speaker:
                     return False
                 job = Job(key, "", "", 1.0, clip=clip, replay=True)
             self._cancel_current()
-            self.queue = [j for j in self.queue if not j.replay]  # a double tap plays once
             self.queue.insert(0, job)
             self.busy_until = now + 3600
             self.wake.notify()
             return True
 
     def _remember(self, job: Job, chunks: list, rate: int) -> None:
-        """Keep a fully made utterance for /replay, even if its playback was later stopped.
+        """Keep an utterance for /replay once all its chunks are made, even if it is then stopped.
 
         Speech stopped before all its chunks were made is not kept. A replay is kept like any
         other speech: it is the same audio, now the last thing said.
         """
-        if job.cancelled or not chunks:
+        whole = len(split_chunks(job.text)) or (len(job.clip.chunks) if job.clip else 0)
+        if not chunks or len(chunks) < whole:
             return
         with self.state_lock:
             now = time.time()
@@ -359,8 +364,10 @@ class Speaker:
                 for i, (samples, rate) in enumerate(self._audio(job)):
                     if job.cancelled:
                         break
+                    job.rate = rate  # before the append: replay() reads made, then rate
                     job.made.append(samples)
-                    job.rate = rate
+                    # Stored as soon as the last chunk is made, before a put that may wait.
+                    self._remember(job, job.made, job.rate)
                     if i == 0:
                         lead = np.zeros(int(self.lead_in() * rate), samples.dtype)
                         samples = np.concatenate([lead, samples])
@@ -368,7 +375,6 @@ class Speaker:
                     with os.fdopen(fd, "wb") as fh:
                         fh.write(wav_bytes(samples, rate))
                     clips.put(path)
-                self._remember(job, job.made, job.rate)
             except Exception as exc:
                 log(f"synthesis failed: {exc}")
             finally:

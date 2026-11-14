@@ -145,12 +145,23 @@ class ReplayTest(unittest.TestCase):
         sp.replay("a")
         self.assertEqual(sp.queue[0].clip.chunks, ["a1"])
 
-    def test_cut_off_speech_and_empty_results_are_not_kept(self):
+    def test_only_fully_made_speech_is_kept_even_if_stopped(self):
         sp = speaker()
-        cut = server.Job("a", "text", "bm_george", 1.0, cancelled=True)
-        sp._remember(cut, ["x"], 24000)
+        long_text = "One sentence of a longer reply, padded out to fill space. " * 10
+        self.assertGreater(len(server.split_chunks(long_text)), 1)
+        sp._remember(server.Job("a", long_text, "bm_george", 1.0, cancelled=True), ["x"], 24000)
         sp._remember(server.Job("a", "text", "bm_george", 1.0), [], 24000)
         self.assertEqual(sp.clips, {})
+        stopped = server.Job("a", "Short reply.", "bm_george", 1.0, cancelled=True)
+        sp._remember(stopped, ["whole"], 24000)
+        self.assertEqual(sp.clips["a"].chunks, ["whole"])
+
+    def test_speech_already_stopped_or_superseded_is_not_restarted(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["stored"])
+        sp.current = server.Job("a", "Outdated reply.", "bm_george", 1.0, cancelled=True, made=["old"])
+        self.assertTrue(sp.replay())
+        self.assertEqual(sp.queue[0].clip.chunks, ["stored"])
 
     def test_stale_sessions_are_dropped(self):
         sp = speaker()
@@ -261,6 +272,46 @@ class ReplayTest(unittest.TestCase):
         release.set()
         time.sleep(0.2)
         self.assertEqual(set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav")), before)
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_files_queued_by_a_cancelled_job_are_deleted(self):
+        np = server.np
+        sp = speaker()
+        # Long enough that the producer blocks on the full queue before making every chunk.
+        job = server.Job("a", "One sentence of a longer reply, padded out. " * 60, "bm_george", 1.0)
+        self.assertGreater(len(server.split_chunks(job.text)), 6)
+        spawned = []
+
+        def spawn(path):
+            spawned.append(path)
+            time.sleep(0.3)  # the producer fills the queue meanwhile
+            job.cancelled = True
+        sp.player, sp.lead_in = ["true"], lambda: 0.0
+        sp.synth = lambda *_: (np.ones(10, np.float32), 24000)
+        sp._spawn, sp._reap = spawn, lambda proc: None
+        before = set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav"))
+        sp._run(job)
+        self.assertEqual(len(spawned), 1)
+        time.sleep(0.3)
+        self.assertEqual(set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav")), before)
+        self.assertNotIn("a", sp.clips)  # cut off before all its chunks were made
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_fully_made_speech_stopped_while_queued_chunks_wait_is_kept(self):
+        np = server.np
+        sp = speaker()
+        job = server.Job("a", "One sentence of a longer reply, padded out. " * 20, "bm_george", 1.0)
+        n = len(server.split_chunks(job.text))
+        self.assertEqual(n, 4)  # one playing, two queued, the last made and waiting to be queued
+
+        def spawn(path):
+            time.sleep(0.3)
+            job.cancelled = True
+        sp.player, sp.lead_in = ["true"], lambda: 0.0
+        sp.synth = lambda *_: (np.ones(10, np.float32), 24000)
+        sp._spawn, sp._reap = spawn, lambda proc: None
+        sp._run(job)
+        self.assertEqual(len(sp.clips["a"].chunks), n)
 
     def test_synthesis_stops_when_the_job_is_cancelled(self):
         sp = speaker()
