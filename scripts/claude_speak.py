@@ -846,7 +846,10 @@ def cmd_again(args) -> None:
     data = data_dir(args.data_dir)
     status = 0
     if server_health(data):
-        status, _ = request(data, "POST", "/replay", {"session": args.session or ""})
+        try:
+            status, _ = request(data, "POST", "/replay", {"session": args.session or ""})
+        except (OSError, http.client.HTTPException):
+            pass  # the server went away since the health check: same as no server
     print("claude-speak: replaying." if status == 200 else "claude-speak: nothing to replay.")
 
 

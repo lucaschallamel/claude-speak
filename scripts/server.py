@@ -38,7 +38,7 @@ import threading
 import time
 import urllib.request
 import wave
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -153,7 +153,10 @@ class Job:
     voice: str
     speed: float
     cancelled: bool = False
-    clip: Clip | None = None  # set on a replay: play these chunks instead of synthesising
+    clip: Clip | None = None  # on a replay: chunks already made, played before synthesising the rest
+    replay: bool = False      # queued by /replay; a newer /replay replaces it
+    made: list = field(default_factory=list)  # chunks produced so far (no lead-in)
+    rate: int = 0
 
 
 @dataclass
@@ -280,38 +283,53 @@ class Speaker:
             self.wake.notify()
 
     def replay(self, session: str = "") -> bool:
-        """Play a session's last utterance (default: the most recent) ahead of the queue.
+        """Play the last thing said again, ahead of the queue. False when there is nothing.
 
-        It interrupts what is playing; queued speech plays after it. False when there is none.
+        Speech still playing is the last thing said (unless another session is asked for): it
+        restarts from the top, reusing the chunks already made and synthesising only the rest.
+        Otherwise the session's stored utterance plays (default: the most recent).
+        It interrupts what is playing; queued speech plays after it.
         """
         with self.state_lock:
-            key = session or self.last_clip
-            clip = self.clips.get(key)
-            if not clip:
-                return False
+            now, cur = time.time(), self.current
+            if cur and session in ("", cur.session):
+                done = max(cur.clip.chunks if cur.clip else [], list(cur.made), key=len)
+                rate = cur.rate or (cur.clip.rate if cur.clip else 0)
+                job = Job(cur.session, cur.text, cur.voice, cur.speed,
+                          clip=Clip(done, rate, now), replay=True)
+            else:
+                key = session or self.last_clip
+                clip = self.clips.get(key)
+                if not clip or now - clip.stored_at >= REPLAY_KEEP:
+                    return False
+                job = Job(key, "", "", 1.0, clip=clip, replay=True)
             self._cancel_current()
-            self.queue.insert(0, Job(key, "", "", 1.0, clip=clip))
-            self.busy_until = time.time() + 3600
+            self.queue = [j for j in self.queue if not j.replay]  # a double tap plays once
+            self.queue.insert(0, job)
+            self.busy_until = now + 3600
             self.wake.notify()
             return True
 
     def _remember(self, job: Job, chunks: list, rate: int) -> None:
-        """Keep a fully synthesised utterance for /replay; replays and cut-off speech are not kept."""
-        if job.clip or job.cancelled or not chunks:
+        """Keep a fully made utterance for /replay, even if its playback was later stopped.
+
+        Speech stopped before all its chunks were made is not kept. A replay is kept like any
+        other speech: it is the same audio, now the last thing said.
+        """
+        if job.cancelled or not chunks:
             return
         with self.state_lock:
             now = time.time()
             self.clips = {s: c for s, c in self.clips.items() if now - c.stored_at < REPLAY_KEEP}
-            self.clips[job.session] = Clip(chunks, rate, now)
+            self.clips[job.session] = Clip(list(chunks), rate, now)
             self.last_clip = job.session
 
     def _audio(self, job: Job):
-        """Yield (samples, rate) per chunk: the stored clip on a replay, else fresh synthesis."""
-        if job.clip:
-            for samples in job.clip.chunks:
-                yield samples, job.clip.rate
-            return
-        for chunk in split_chunks(job.text):
+        """Yield (samples, rate) per chunk: chunks already made (a replay), then synthesis of the rest."""
+        done = job.clip.chunks if job.clip else []
+        for samples in done:
+            yield samples, job.clip.rate
+        for chunk in split_chunks(job.text)[len(done):]:
             if job.cancelled:
                 return
             yield self.synth(chunk, job.voice, job.speed)
@@ -337,12 +355,12 @@ class Speaker:
         clips: queue.Queue = queue.Queue(maxsize=2)
 
         def produce():
-            made, rate = [], 0
             try:
                 for i, (samples, rate) in enumerate(self._audio(job)):
                     if job.cancelled:
                         break
-                    made.append(samples)
+                    job.made.append(samples)
+                    job.rate = rate
                     if i == 0:
                         lead = np.zeros(int(self.lead_in() * rate), samples.dtype)
                         samples = np.concatenate([lead, samples])
@@ -350,23 +368,38 @@ class Speaker:
                     with os.fdopen(fd, "wb") as fh:
                         fh.write(wav_bytes(samples, rate))
                     clips.put(path)
-                self._remember(job, made, rate)
+                self._remember(job, job.made, job.rate)
             except Exception as exc:
                 log(f"synthesis failed: {exc}")
             finally:
                 clips.put(None)
 
+        def drain():
+            while (path := clips.get()) is not None:
+                os.unlink(path)
+
         threading.Thread(target=produce, daemon=True).start()
-        while (path := clips.get()) is not None:
+        while True:
+            try:
+                path = clips.get(timeout=0.05)
+            except queue.Empty:
+                if job.cancelled:
+                    break
+                continue
+            if path is None:
+                return
             try:
                 with self.state_lock:
                     if job.cancelled:
-                        continue
+                        break
                     self._end_warm()
                     proc = self.proc = self._spawn(path)
                 self._reap(proc)
             finally:
                 os.unlink(path)
+        # Cancelled: don't wait for the chunk being synthesised, so the next job (a replay,
+        # a newer reply) starts now; the producer's leftovers are deleted in the background.
+        threading.Thread(target=drain, daemon=True).start()
 
 
 class Handler(BaseHTTPRequestHandler):

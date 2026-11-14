@@ -275,6 +275,14 @@ class AgainTest(TempDataTest):
         _, said = self.run_again({"ok": True}, status=404)
         self.assertEqual(said, "claude-speak: nothing to replay.")
 
+    def test_server_gone_since_the_health_check(self):
+        args = mock.Mock(data_dir=str(self.data), session=None)
+        with mock.patch.object(cs, "server_health", return_value={"ok": True}), \
+                mock.patch.object(cs, "request", side_effect=ConnectionRefusedError), \
+                mock.patch("builtins.print") as out:
+            cs.cmd_again(args)
+        out.assert_called_once_with("claude-speak: nothing to replay.")
+
     def test_replay_posts_the_session(self):
         request, said = self.run_again({"ok": True}, session="s1")
         request.assert_called_once_with(mock.ANY, "POST", "/replay", {"session": "s1"})

@@ -145,15 +145,12 @@ class ReplayTest(unittest.TestCase):
         sp.replay("a")
         self.assertEqual(sp.queue[0].clip.chunks, ["a1"])
 
-    def test_replays_cut_off_speech_and_empty_results_are_not_kept(self):
+    def test_cut_off_speech_and_empty_results_are_not_kept(self):
         sp = speaker()
         cut = server.Job("a", "text", "bm_george", 1.0, cancelled=True)
         sp._remember(cut, ["x"], 24000)
         sp._remember(server.Job("a", "text", "bm_george", 1.0), [], 24000)
         self.assertEqual(sp.clips, {})
-        self.remembered(sp, "a", ["kept"])
-        sp._remember(server.Job("a", "", "", 1.0, clip=sp.clips["a"]), ["replayed"], 24000)
-        self.assertEqual(sp.clips["a"].chunks, ["kept"])
 
     def test_stale_sessions_are_dropped(self):
         sp = speaker()
@@ -161,6 +158,109 @@ class ReplayTest(unittest.TestCase):
         sp.clips["old"].stored_at -= server.REPLAY_KEEP + 1
         self.remembered(sp, "new")
         self.assertEqual(set(sp.clips), {"new"})
+
+    def test_speech_still_being_made_restarts_from_the_top_not_an_older_clip(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["older"])
+        long_text = " ".join(f"Sentence {i} of a long question, padded out to fill space." for i in range(12))
+        sp.current = server.Job("a", long_text, "bm_george", 1.2, made=["c1"], rate=24000)
+        self.assertTrue(sp.replay())
+        self.assertTrue(sp.current.cancelled)
+        job = sp.queue[0]
+        self.assertEqual((job.session, job.voice, job.speed, job.clip.chunks), ("a", "bm_george", 1.2, ["c1"]))
+        sp.synth = mock.Mock(side_effect=lambda chunk, *_: (chunk, 24000))
+        audio = list(sp._audio(job))
+        chunks = server.split_chunks(long_text)
+        self.assertGreater(len(chunks), 1)
+        # The made chunk plays as is; only the rest is synthesised.
+        self.assertEqual(audio, [("c1", 24000)] + [(c, 24000) for c in chunks[1:]])
+        self.assertEqual(sp.synth.call_count, len(chunks) - 1)
+
+    def test_fully_made_speech_restarts_without_synthesis(self):
+        sp = speaker()
+        sp.synth = mock.Mock(side_effect=AssertionError("synthesised on replay"))
+        sp.current = server.Job("b", "Short.", "bm_george", 1.0, made=["b1"], rate=24000)
+        self.assertTrue(sp.replay())
+        self.assertEqual(list(sp._audio(sp.queue[0])), [("b1", 24000)])
+
+    def test_a_replay_playing_restarts_with_all_its_chunks(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["a1", "a2"])
+        sp.replay()
+        sp.current = sp.queue.pop(0)
+        sp.current.made = ["a1"]  # only its first chunk has been produced so far
+        sp.replay()
+        self.assertEqual(sp.queue[0].clip.chunks, ["a1", "a2"])
+
+    def test_a_finished_restart_is_kept_as_the_last_thing_said(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["older"])
+        restart = server.Job("a", "text", "bm_george", 1.0, clip=server.Clip(["c1"], 24000, 0), replay=True)
+        sp._remember(restart, ["c1", "c2"], 24000)
+        self.assertEqual(sp.clips["a"].chunks, ["c1", "c2"])
+
+    def test_asking_for_another_session_ignores_the_current_speech(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["a1"])
+        sp.current = server.Job("b", "Now.", "bm_george", 1.0)
+        self.assertTrue(sp.replay("a"))
+        self.assertEqual(sp.queue[0].clip.chunks, ["a1"])
+
+    def test_a_double_tap_plays_once(self):
+        sp = speaker()
+        self.remembered(sp, "a")
+        sp.speak("queued", "bm_george", 1.0, session="c")
+        sp.replay()
+        sp.replay()
+        self.assertEqual([j.replay for j in sp.queue], [True, False])
+
+    def test_clips_older_than_the_keep_time_are_not_replayed(self):
+        sp = speaker()
+        self.remembered(sp, "a")
+        sp.clips["a"].stored_at -= server.REPLAY_KEEP + 1
+        self.assertFalse(sp.replay())
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_playback_stores_the_samples_without_the_lead_in(self):
+        np = server.np
+        sp = speaker()
+        made = [np.ones(10, np.float32), np.full(5, 2, np.float32)]
+        sp.player, sp.lead_in = ["true"], lambda: 0.5
+        sp.synth = mock.Mock(side_effect=[(made[0], 24000), (made[1], 24000)])
+        played = []
+        sp._spawn = lambda path: played.append(Path(path).stat().st_size)
+        sp._reap = lambda proc: None
+        sp._run(server.Job("a", "One sentence. " * 30, "bm_george", 1.0))
+        self.assertEqual(len(played), 2)
+        clip = sp.clips["a"]
+        self.assertEqual((len(clip.chunks), clip.rate), (2, 24000))
+        self.assertTrue(all(np.array_equal(a, b) for a, b in zip(clip.chunks, made)))
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_a_cancelled_job_does_not_wait_for_synthesis_in_flight(self):
+        np = server.np
+        sp = speaker()
+        job = server.Job("a", "One sentence. " * 30, "bm_george", 1.0)
+        release, first = threading.Event(), [True]
+
+        def synth(*_):
+            if not first[0]:
+                release.wait(5)  # the second chunk is slow to make
+            first[0] = False
+            return np.ones(10, np.float32), 24000
+
+        def spawn(path):
+            job.cancelled = True  # stopped while its first chunk plays
+        sp.player, sp.lead_in, sp.synth = ["true"], lambda: 0.0, synth
+        sp._spawn, sp._reap = spawn, lambda proc: None
+        before = set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav"))
+        runner = threading.Thread(target=sp._run, args=(job,))
+        runner.start()
+        runner.join(1)
+        self.assertFalse(runner.is_alive(), "_run waited for the slow chunk")
+        release.set()
+        time.sleep(0.2)
+        self.assertEqual(set(Path(tempfile.gettempdir()).glob("claude-speak-*.wav")), before)
 
     def test_synthesis_stops_when_the_job_is_cancelled(self):
         sp = speaker()
