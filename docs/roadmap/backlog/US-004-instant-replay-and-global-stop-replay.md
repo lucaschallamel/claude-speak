@@ -5,7 +5,7 @@ title: 'Instant replay and global stop/replay hotkeys'
 epic: '2 Quiet'
 priority: 'Medium'
 story_points: 2
-status: 'In Progress'
+status: 'Done'
 assignee: 'Claude Code'
 author: 'Claude Code'
 created: '2026-11-07'
@@ -15,6 +15,7 @@ github_issue: 4
 
 > [!note]- Progress updates
 >
+> - **2026-11-14**: [S10_MERGE] PR #23 squash-merged as ea64f0a after 4/4 CI checks passed; issue #4 closed. Story Done, card DONE, pipeline completed (close PR).
 > - **2026-11-14**: [S9_CLOSE] AC1-AC5 met and ticked: 78 tests, real-Kokoro and hands-on checks (S6), DoD verified (S7), journal and memory bank captured (S8). Status stays In Progress until the merge.
 > - **2026-11-14**: [S4-S8] Reviews at S4 (two fresh rounds), S5 and S7; every finding mitigated at Lucas's request (replay restarts the speech playing now, no wait on cancel, double-tap guard, socket 600, session cap, docs). Hands-on: replay heard with the avatar's mouth moving; SUPER+Escape stop works.
 > - **2026-11-14**: [S3_EXECUTE] `/replay` endpoint, `claude-speak again`, README hotkeys with wrapper. 58 tests pass (10 new). Real Kokoro run: replay reached the player 84 ms after `again`, same clip, no synthesis.
