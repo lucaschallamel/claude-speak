@@ -12,7 +12,15 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S6_TEST_QUALITY_VERIFY
+current_stage: S3_EXECUTE
+round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
+round_3_measurements:
+  - 'Procedure as before (worktree server, real Kokoro, bm_george/bf_emma x1.1, logging pw-play wrapper, omarchy); load recorded per set'
+  - '80-char chunks, before stop-ahead and prefetch (load 8.2 rising to 13.9, kswapd0 at 100%, 14 GiB swap, ld jobs from another process): status line 9.64, 4.49, 0.69, 0.85, 2.64 s; reply 3.04 s after the chunk ended'
+  - 'With stop-ahead only (load 9.6 to 13.9, cmake from another process): status line 0.84, 3.43, 0.79, 0.86, 1.24 s; reply 1.97 s after the chunk ended'
+  - 'With stop-ahead and prefetch (load 6.6 to 9.3): status line 0.59, 2.69, 0.75, 0.79, 0.81 s (median 0.79, worst 2.69 vs bar 2.5); reply 0.01 s after the chunk ended, 2.87 s after its /speak; stale 0 chunks'
+  - 'AC6 with prefetch (load 9.7): 1.90, 1.41, 1.47, 3.03, 2.01 s: median 1.90 s (bar 3.0), worst 3.03 s (bar 5.6)'
+  - 'Status line again (load 12.9 rising to 17.8: other Claude sessions, orca-ide and python processes at ~100% each): 1.69, 0.86, 5.44, 3.55, 2.37 s; measuring stopped as not representative'
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -53,7 +61,7 @@ stages:
       - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
     commit: ''
   S3_EXECUTE:
-    status: completed
+    status: in_progress
     round_2_completed_at: '2026-11-14T16:46:15Z'
     round_2_evidence:
       - 'Code: split_chunks(per_sentence) with a shared _pack helper; CLAUSE_CHARS = 80; Job.per_sentence set for the low lane and kept by _resumed and the replay restart; _remember and _audio split by the job''s mode'

@@ -83,6 +83,12 @@ Lucas settled these in a second grilling session after S4:
 18. One sentence per chunk missed AC6 by 0.01 s (median 3.01 s, worst 4.18 s at load average 13), because a long sentence still takes 2-3 s to synthesise. Long status-line sentences are also split at commas (and, after the S4 round-2 review, semicolons) into pieces of about 80 characters (at most 81: the packing ignores the joining space, as it always has for replies). Measured after: median 1.38 s, worst 1.58 s.
 19. That makes the AC1 tail slower: while one piece plays, the next is being synthesised, and a question waits for it. Over 8 runs: median 1.08 s, two runs over 1.5 s (1.58, 1.93). The AC1 bar over a status line becomes a median of 5 under 1.5 s with no run over 2.5 s, the same form as AC6. Across both cases the worst wait fell from 5.59 s to 1.93 s.
 
+Lucas settled these at the S6 hands-on (through `avatar-play`):
+
+20. Status-line pauses sound natural. A status line cut by another session's question sounds right: a cut, a short pause, then the question.
+21. A question over a reply waited about 15 s, for the reply's whole 250-character chunk. All speech now uses one chunking rule: sentences, long ones split at commas and semicolons, short ones packed to about 80 characters (`CHUNK_CHARS = 80`). The separate status-line mode is gone.
+22. With small chunks the reply's producer is always synthesising ahead, so the question waited for its own synthesis after the boundary (about 2 s under load). Now the preempted reply stops synthesising, and the question's first chunk is synthesised while the reply's chunk finishes (`_prefetch`). Measured: the question starts 0.01 s after the reply's chunk ends.
+
 ## Release notes (for 0.4.0)
 
 - After updating, run `claude-speak stop` (or wait up to `CLAUDE_SPEAK_IDLE_TIMEOUT`, 30 minutes): a server started by the old version keeps running without lanes until it exits (S5 finding 6). Put this in the laptop update block.

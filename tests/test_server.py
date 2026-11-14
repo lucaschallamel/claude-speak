@@ -50,31 +50,19 @@ class SplitChunksTest(unittest.TestCase):
 
     def test_empty(self):
         self.assertEqual(server.split_chunks("   "), [])
-        self.assertEqual(server.split_chunks("   ", per_sentence=True), [])
 
-    def test_per_sentence_splits_at_sentence_ends_and_lines_only(self):
-        self.assertEqual(server.split_chunks("One. Two! Three? Four: five; six, seven.\n eight ", True),
-                         ["One.", "Two!", "Three?", "Four: five; six, seven.", "eight"])
-
-    def test_per_sentence_splits_a_long_sentence_at_commas(self):
-        clause = "this clause is about thirty chars"
-        long = ", ".join([clause] * 6) + "."
-        chunks = server.split_chunks(f"Short one. {long}", per_sentence=True)
-        self.assertEqual(chunks[0], "Short one.")
-        self.assertEqual(" ".join(chunks[1:]), long)  # nothing lost or reordered
-        for chunk in chunks[1:]:
-            self.assertLessEqual(len(chunk), server.CLAUSE_CHARS)
-        self.assertEqual(server.split_chunks("x" * 100 + ".", True), ["x" * 100 + "."])  # no comma
-
-    def test_per_sentence_splits_a_long_sentence_at_semicolons_not_colons(self):
+    def test_a_long_sentence_splits_at_commas_and_semicolons_not_colons(self):
         clause = "reading the server code and its tests"
-        long = "; ".join([clause] * 4) + "."
-        chunks = server.split_chunks(f"claude speak: {long}", per_sentence=True)
-        self.assertEqual(" ".join(chunks), f"claude speak: {long}")
-        self.assertGreater(len(chunks), 1)
-        self.assertTrue(chunks[0].startswith("claude speak: "))  # a label is never a piece alone
+        long = ", ".join([clause] * 3) + "; " + ", ".join([clause] * 3) + "."
+        chunks = server.split_chunks(f"claude speak: {long}")
+        self.assertEqual(" ".join(chunks), f"claude speak: {long}")  # nothing lost or reordered
+        self.assertGreater(len(chunks), 2)
+        self.assertTrue(chunks[0].startswith("claude speak: "))  # a label is never a chunk alone
         for chunk in chunks:
-            self.assertLessEqual(len(chunk), server.CLAUSE_CHARS + 1)  # _pack's joining space
+            self.assertLessEqual(len(chunk), server.CHUNK_CHARS + 1)  # _pack's joining space
+
+    def test_a_long_piece_with_no_break_stays_whole(self):
+        self.assertEqual(server.split_chunks("x" * 100 + ". Next."), ["x" * 100 + ".", "Next."])
 
 
 def speaker() -> "server.Speaker":
@@ -308,7 +296,7 @@ class ReplayTest(unittest.TestCase):
         played = []
         sp._spawn = lambda path: played.append(Path(path).stat().st_size)
         sp._reap = lambda proc: None
-        sp._run(server.Job("a", "One sentence. " * 30, "bm_george", 1.0))
+        sp._run(server.Job("a", "One sentence. " * 10, "bm_george", 1.0))  # two chunks
         self.assertEqual(len(played), 2)
         clip = sp.clips["a"]
         self.assertEqual((len(clip.chunks), clip.rate), (2, 24000))
@@ -385,7 +373,7 @@ class ReplayTest(unittest.TestCase):
     def test_fully_made_speech_stopped_while_queued_chunks_wait_is_kept(self):
         np = server.np
         sp = speaker()
-        job = server.Job("a", "One sentence of a longer reply, padded out. " * 20, "bm_george", 1.0)
+        job = server.Job("a", "I am reading the server code and its tests now. " * 4, "bm_george", 1.0)
         n = len(server.split_chunks(job.text))
         self.assertEqual(n, 4)  # one playing, two queued, the last made and waiting to be queued
 
@@ -418,8 +406,18 @@ class ReplayTest(unittest.TestCase):
         sp.synth = synth
         self.assertEqual(len(list(sp._audio(job))), 1)
 
+    def test_synthesis_stops_when_the_job_is_preempted(self):
+        sp = speaker()
+        job = server.Job("a", "One sentence. " * 40, "bm_george", 1.0)
 
-THREE_CHUNKS = "One sentence. " * 50  # split_chunks: three chunks
+        def synth(*_):
+            job.preempt = True  # a question arrived: don't hold the synth lock for more chunks
+            return "s", 24000
+        sp.synth = synth
+        self.assertEqual(len(list(sp._audio(job))), 1)
+
+
+THREE_CHUNKS = "One sentence. " * 15  # split_chunks: three chunks
 
 
 class LanesTest(unittest.TestCase):
@@ -483,6 +481,59 @@ class LanesTest(unittest.TestCase):
         self.assertFalse(cur.cancelled)
         sp.proc.terminate.assert_not_called()
 
+    def test_a_question_s_first_chunk_is_made_while_the_reply_finishes_its_chunk(self):
+        sp = speaker()
+        self.playing(sp, "a", server.NORMAL)
+        sp.synth = mock.Mock(side_effect=lambda chunk, *_: (f"made {chunk}", 24000))
+        text = "Question from session B. Which option do you want, the first or the second?"
+        sp.speak(text, "bf_emma", 1.0, "b", priority="urgent")
+        question = sp.queue[0]
+        self.assertTrue(question.prefetched.wait(5), "prefetch did not finish")
+        first, *rest = server.split_chunks(text)
+        self.assertEqual(question.clip.chunks, [f"made {first}"])
+        # When the question plays, its first chunk is not synthesised again.
+        self.assertEqual([c for c, _ in sp._audio(question)], [f"made {first}"] + [f"made {c}" for c in rest])
+        self.assertEqual(sp.synth.call_count, 1 + len(rest))
+
+    def test_a_question_that_starts_early_waits_for_its_prefetch(self):
+        sp = speaker()
+        self.playing(sp, "a", server.NORMAL)
+        release = threading.Event()
+
+        def synth(chunk, *_):
+            release.wait(5)  # the prefetch is still synthesising when the question starts
+            return f"made {chunk}", 24000
+        sp.synth = mock.Mock(side_effect=synth)
+        sp.speak("Which option?", "bf_emma", 1.0, "b", priority="urgent")
+        question = sp.queue[0]
+        got = []
+        runner = threading.Thread(target=lambda: got.extend(sp._audio(question)))
+        runner.start()
+        time.sleep(0.1)
+        self.assertEqual(got, [])  # waiting for the prefetch, not synthesising chunk 1 itself
+        release.set()
+        runner.join(5)
+        self.assertEqual(got, [("made Which option?", 24000)])
+        self.assertEqual(sp.synth.call_count, 1)
+
+    def test_no_prefetch_for_a_status_line_cut_or_a_question_cancelled_meanwhile(self):
+        sp = speaker()
+        self.playing(sp, "a", server.LOW)
+        sp.speak("Which option?", "bf_emma", 1.0, "b", priority="urgent")
+        self.assertIsNone(sp.queue[0].prefetched)  # the status line was cut: it plays at once
+        for cancel_during_synth in (False, True):
+            question = server.Job("b", "Which option?", "bf_emma", 1.0, priority=0,
+                                  cancelled=not cancel_during_synth, prefetched=threading.Event())
+
+            def synth(*_):
+                question.cancelled = True  # e.g. session B was hushed while chunk 1 was made
+                return "s", 24000
+            sp.synth = mock.Mock(side_effect=synth)
+            sp._prefetch(question)
+            self.assertIsNone(question.clip)
+            self.assertTrue(question.prefetched.is_set())  # its producer never waits forever
+            self.assertEqual(sp.synth.call_count, int(cancel_during_synth))
+
     def test_questions_and_replays_are_never_preempted_nor_a_lane_by_its_own(self):
         for priority, newcomer in [(0, "urgent"), (server.REPLAY_PRIORITY, "urgent"), (1, "normal")]:
             sp = speaker()
@@ -502,32 +553,21 @@ class LanesTest(unittest.TestCase):
         sp.speak("status", "bm_george", 1.0, "a", priority="low")
         self.assertEqual(self.lanes(sp), [("a", 1)])
 
-    def test_status_lines_are_synthesised_one_sentence_at_a_time(self):
+    def test_a_replay_of_speech_being_made_keeps_its_chunks_and_needs_all_to_be_kept(self):
         sp = speaker()
-        text = "Reading the server. Then the tests. Then the docs."
-        sp.speak(text, "bm_george", 1.0, "a", priority="low")
-        sp.speak(text, "bm_george", 1.0, "b")
-        low, normal = sp.queue[1], sp.queue[0]
-        sp.synth = mock.Mock(side_effect=lambda chunk, *_: (chunk, 24000))
-        self.assertEqual([c for c, _ in sp._audio(low)],
-                         ["Reading the server.", "Then the tests.", "Then the docs."])
-        self.assertEqual([c for c, _ in sp._audio(normal)], [text])  # replies keep big chunks
-
-    def test_replays_and_resumes_of_a_status_line_keep_its_sentence_chunks(self):
-        sp = speaker()
-        text = "Reading the server. Then the tests. Then the docs."
-        cur = self.playing(sp, "a", server.LOW, made=["s1"], rate=24000, per_sentence=True)
-        cur.text = text
-        self.assertTrue(sp._resumed(cur).per_sentence)
+        sentence = "I am reading the server code and its tests now."
+        text = " ".join([sentence] * 3)
+        self.assertEqual(server.split_chunks(text), [sentence] * 3)  # three chunks at 80
+        self.playing(sp, "a", server.LOW, made=["s1"], rate=24000).text = text
         self.assertTrue(sp.replay("a"))
         job = sp.queue[0]
         sp.synth = mock.Mock(side_effect=lambda chunk, *_: (chunk, 24000))
-        # The made first sentence plays as is; only the two others are synthesised.
-        self.assertEqual([c for c, _ in sp._audio(job)], ["s1", "Then the tests.", "Then the docs."])
+        # The made first chunk plays as is; only the two others are synthesised.
+        self.assertEqual([c for c, _ in sp._audio(job)], ["s1", sentence, sentence])
         sp._remember(job, ["s1"], 24000)
-        self.assertNotIn("a", sp.clips)  # stopped after one of three pieces: not whole, not kept
+        self.assertNotIn("a", sp.clips)  # stopped after one of three chunks: not whole, not kept
         sp._remember(job, ["s1", "s2", "s3"], 24000)
-        self.assertIn("a", sp.clips)  # three sentence chunks make the whole utterance
+        self.assertIn("a", sp.clips)
 
     def test_a_question_still_replaces_its_session_s_status_line(self):
         sp = speaker()
@@ -609,6 +649,25 @@ class LanesTest(unittest.TestCase):
         self.assertEqual(self.run_job(sp, job), [10, 20])
         self.assertEqual(sp.synth.call_count, 1)
         self.assertEqual(job.played, 3)
+
+    @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
+    def test_a_reply_resumes_when_its_producer_stopped_before_the_next_chunk(self):
+        np = server.np
+        sp = speaker()
+        sp.player, sp.lead_in = ["true"], lambda: 0.0
+        job = server.Job("a", THREE_CHUNKS, "bm_george", 1.0)
+
+        def audio(j):  # the producer stops at the preempt check with nothing queued (_audio)
+            yield np.ones(10, np.float32), 24000
+            wait_until(lambda: j.preempt)
+
+        def preempt(n):
+            job.preempt = True  # while chunk 1 plays, before the producer reaches chunk 2
+        sp._audio = audio
+        with private_tmp():
+            self.assertEqual(self.run_job(sp, job, preempt), [10])
+        self.assertEqual(self.lanes(sp), [("a", server.NORMAL)])  # the rest is not lost
+        self.assertEqual(sp.queue[0].played, 1)
 
     @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
     def test_no_resume_when_preempted_during_the_last_chunk_or_then_cancelled(self):

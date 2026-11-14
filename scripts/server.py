@@ -67,11 +67,10 @@ VOICES_FILE = "voices-v1.0.bin"
 LANGS = {"a": "en-us", "b": "en-gb", "e": "es", "f": "fr-fr", "h": "hi",
          "i": "it", "j": "ja", "p": "pt-br", "z": "cmn"}
 
-# Start speaking after the first chunk instead of waiting for the whole text.
-CHUNK_CHARS = 250
-# Status lines are split finer (split_chunks per_sentence): speech that cuts one waits for
-# the piece being synthesised, which can't be interrupted.
-CLAUSE_CHARS = 80
+# Start speaking after the first chunk instead of waiting for the whole text. Small, because
+# speech from another session waits for the chunk being synthesised (it can't be interrupted)
+# and, over a reply, for the chunk playing to end.
+CHUNK_CHARS = 80
 
 # How long the output must be playing before speech starts, so the first words
 # aren't lost while an idle device (Bluetooth especially) wakes up. Time already
@@ -158,15 +157,13 @@ def _pack(parts, limit: int) -> list[str]:
     return chunks
 
 
-def split_chunks(text: str, per_sentence: bool = False) -> list[str]:
-    """Chunks of about CHUNK_CHARS made of whole sentences. per_sentence (status lines): one
-    sentence each, a long one split at commas and semicolons into pieces of about
-    CLAUSE_CHARS, so speech that cuts a status line waits for one short piece's synthesis.
-    (_pack ignores the joining space, so a chunk can be one character over.)"""
-    if per_sentence:
-        sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
-        return [c for s in sentences for c in _pack(re.split(r"(?<=[,;])\s+", s), CLAUSE_CHARS)]
-    return _pack(re.split(r"(?<=[.!?;:])\s+|\n+", text.strip()), CHUNK_CHARS)
+def split_chunks(text: str) -> list[str]:
+    """Chunks of about CHUNK_CHARS: sentences, a long one split at commas and semicolons
+    (not colons, so a "project: " label stays with its words), short ones packed together.
+    A piece with no such break stays whole; _pack ignores the joining space, so a chunk can
+    be one character over."""
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
+    return _pack([c for s in sentences for c in re.split(r"(?<=[,;])\s+", s)], CHUNK_CHARS)
 
 
 def wav_bytes(samples: np.ndarray, rate: int) -> bytes:
@@ -196,8 +193,7 @@ class Job:
     at: float = 0.0       # when the hook asked for it (epoch); a stale status line is dropped
     played: int = 0       # chunks fully played; a resumed job starts after them
     preempt: bool = False  # stop at the next chunk boundary, then resume
-    per_sentence: bool = False  # split one sentence per chunk (status lines); kept by replays
-
+    prefetched: threading.Event | None = None  # set once _prefetch has made (or failed) chunk 1
 
 @dataclass
 class Clip:
@@ -336,8 +332,7 @@ class Speaker:
             if label and others:
                 text = f"{re.sub(r'[-_.]+', ' ', label)}: {text}"
             self._cancel_session(session)
-            job = Job(session, text, voice, speed, priority=lane, at=asked_at,
-                      per_sentence=lane == LOW)
+            job = Job(session, text, voice, speed, priority=lane, at=asked_at)
             self._enqueue(job)
             self._preempt_for(job)
             self.busy_until = now + 3600
@@ -363,13 +358,30 @@ class Speaker:
             self._cancel_current()
         else:
             cur.preempt = True
+            if self.queue and self.queue[0] is job and job.prefetched is None:
+                job.prefetched = threading.Event()
+                threading.Thread(target=self._prefetch, args=(job,), daemon=True).start()
+
+    def _prefetch(self, job: Job) -> None:
+        """Make a job's first chunk while the reply it preempts finishes its chunk, so it
+        starts right at the boundary instead of after its own synthesis."""
+        try:
+            chunks = split_chunks(job.text)
+            if chunks and not job.cancelled:
+                samples, rate = self.synth(chunks[0], job.voice, job.speed)
+                with self.state_lock:
+                    if not job.cancelled and job.clip is None:
+                        job.clip = Clip([samples], rate, time.time())
+        except Exception as exc:  # the job then synthesises chunk 1 itself
+            log(f"prefetch failed: {exc}")
+        finally:
+            job.prefetched.set()
 
     @staticmethod
     def _resumed(job: Job) -> Job:
         """The rest of a preempted job: chunks made but not yet played are reused."""
         rest = Job(job.session, job.text, job.voice, job.speed, priority=job.priority, at=job.at,
-                   clip=Clip(list(job.made), job.rate, time.time()), played=job.played,
-                   per_sentence=job.per_sentence)
+                   clip=Clip(list(job.made), job.rate, time.time()), played=job.played)
         rest.made = rest.clip.chunks[:job.played]  # whole once the rest is made, for /replay
         return rest
 
@@ -395,8 +407,7 @@ class Speaker:
                 done = max(cur.clip.chunks if cur.clip else [], list(cur.made), key=len)
                 rate = cur.rate or (cur.clip.rate if cur.clip else 0)
                 job = Job(cur.session, cur.text, cur.voice, cur.speed,
-                          clip=Clip(done, rate, now), replay=True, priority=REPLAY_PRIORITY,
-                          per_sentence=cur.per_sentence)
+                          clip=Clip(done, rate, now), replay=True, priority=REPLAY_PRIORITY)
             else:
                 key = session or self.last_clip
                 clip = self.clips.get(key)
@@ -415,7 +426,7 @@ class Speaker:
         Speech stopped before all its chunks were made is not kept. A replay is kept like any
         other speech: it is the same audio, now the last thing said.
         """
-        whole = len(split_chunks(job.text, job.per_sentence)) or (len(job.clip.chunks) if job.clip else 0)
+        whole = len(split_chunks(job.text)) or (len(job.clip.chunks) if job.clip else 0)
         if not chunks or len(chunks) < whole:
             return
         with self.state_lock:
@@ -429,11 +440,13 @@ class Speaker:
     def _audio(self, job: Job):
         """Yield (samples, rate) per chunk after the ones played (a resume): chunks already
         made (a replay or resume), then synthesis of the rest."""
+        if job.prefetched:
+            job.prefetched.wait()  # its first chunk is being made; don't synthesise it twice
         done = job.clip.chunks if job.clip else []
         for samples in done[job.played:]:
             yield samples, job.clip.rate
-        for chunk in split_chunks(job.text, job.per_sentence)[max(len(done), job.played):]:
-            if job.cancelled:
+        for chunk in split_chunks(job.text)[max(len(done), job.played):]:
+            if job.cancelled or job.preempt:  # preempt: free the synth lock for the speech waiting
                 return
             yield self.synth(chunk, job.voice, job.speed)
 
@@ -504,6 +517,9 @@ class Speaker:
                     break
                 continue
             if path is None:
+                # The producer stops early when preempted (_audio); chunks left unplayed resume.
+                if job.preempt and job.played < len(split_chunks(job.text)):
+                    break
                 return
             try:
                 with self.state_lock:
