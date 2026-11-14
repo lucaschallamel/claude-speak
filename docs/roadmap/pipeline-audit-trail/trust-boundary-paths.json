@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "paths": [
+    "scripts/server.py",
+    "scripts/claude_speak.py",
+    "hooks/hooks.json",
+    "bin/claude-speak"
+  ]
+}

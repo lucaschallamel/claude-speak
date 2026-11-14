@@ -8,6 +8,13 @@
 - Milestones: 1 Foundation, 2 Quiet, 3 Characters, 4 Smarter speech (agent-avatar has 3 and 4). Build order follows them; #15 (second TTS engine spike) last.
 - Source of truth: GitHub issues = tracker and discussion; `docs/roadmap/backlog/<ID>.md` = the spec (copied decisions included); keep issue, story file and `docs/roadmap/KANBAN.md` card in step. Current state: `memory-bank/` (read at session start). Session notes: `docs/dev-journal/`. Serena = code conventions; Hindsight = history/reasons; Claude memory = pointers.
 - `gh pr`/`gh issue`: always `--repo lucaschallamel/claude-speak` (gh defaults to upstream).
+- Delivery runs through `/cu:pipe`, using the standard profile for every story (fresh reviews at S4, S5 and S7).
+  - At S1, re-read the issue and its comments and update the story file.
+  - Push the feature branch after every checkpoint commit from S1 onwards; no PR until S10.
+  - Squash-merge at S10, and record COPPER's ancestry check, which needs a merge commit, as unverified.
+  - Then open a close PR (`chore/<ID>-close`). It merges only on its own approval from Lucas.
+- Measure latency and behaviour on real hardware before calling a story done. Run the worktree's server with its own `CLAUDE_SPEAK_DATA` so the installed plugin is untouched. Unit tests passed while restart latency was 5.3 s.
+- Trust-boundary paths for COPPER S5 are in `docs/roadmap/pipeline-audit-trail/trust-boundary-paths.json`, read from main.
 - Linux/Hyprland-first is fine; never break macOS (CI covers it); document Mac fallback per story.
 - Generic features stay free of avatar code (upstream later); fork-only bits (avatar cues, Omarchy triggers) behind env flags or separate files.
 - Comments explain why only; style matches surrounding code (section banner comments in claude_speak.py).
