@@ -3,6 +3,7 @@
 Run: python3 -m unittest discover tests
 """
 
+import os
 import sys
 import tempfile
 import threading
@@ -313,6 +314,16 @@ class ReplayTest(unittest.TestCase):
         sp._run(job)
         self.assertEqual(len(sp.clips["a"].chunks), n)
 
+    def test_at_most_the_session_cap_is_kept_oldest_first_out(self):
+        sp = speaker()
+        for i in range(server.REPLAY_SESSIONS + 2):
+            self.remembered(sp, f"s{i}")
+            sp.clips[f"s{i}"].stored_at -= server.REPLAY_SESSIONS + 2 - i  # s0 is the oldest
+        self.assertEqual(len(sp.clips), server.REPLAY_SESSIONS)
+        self.assertNotIn("s0", sp.clips)
+        self.assertNotIn("s1", sp.clips)
+        self.assertIn(f"s{server.REPLAY_SESSIONS + 1}", sp.clips)
+
     def test_synthesis_stops_when_the_job_is_cancelled(self):
         sp = speaker()
         job = server.Job("a", "One sentence. " * 40, "bm_george", 1.0)
@@ -322,6 +333,21 @@ class ReplayTest(unittest.TestCase):
             return "s", 24000
         sp.synth = synth
         self.assertEqual(len(list(sp._audio(job))), 1)
+
+
+class ServerSocketTest(unittest.TestCase):
+    def test_only_the_user_can_connect_whatever_the_umask(self):
+        tmp = tempfile.mkdtemp()
+        old = os.umask(0o000)  # the most permissive umask a /tmp fallback could see
+        try:
+            srv = server.Server(os.path.join(tmp, "s.sock"), None, "model")
+        finally:
+            os.umask(old)
+        try:
+            self.assertEqual(os.stat(srv.server_address).st_mode & 0o777, 0o600)
+            self.assertEqual(os.umask(old), old, "umask restored after bind")
+        finally:
+            srv.server_close()
 
 
 class WatchDictationTest(unittest.TestCase):

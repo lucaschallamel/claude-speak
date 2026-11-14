@@ -213,7 +213,9 @@ The client (`scripts/claude_speak.py`) is stdlib-only Python. The voice server (
   summary and no new synthesis. Pressed while something is still speaking, it starts that
   again from the top. It interrupts what is playing; queued speech plays after it.
   `/rephrase` stays the slower "say it differently". The server keeps each session's last
-  utterance in memory for an hour; with no server running there is nothing to replay.
+  utterance in memory only, never on disk, for up to an hour while it is running; it exits
+  after `CLAUDE_SPEAK_IDLE_TIMEOUT` idle seconds (30 minutes by default), and with no server
+  running there is nothing to replay.
 
 ### Hotkeys
 

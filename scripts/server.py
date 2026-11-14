@@ -79,6 +79,8 @@ OTHERS_ACTIVE = 300.0
 
 # How long a session's last utterance is kept for /replay (in memory only).
 REPLAY_KEEP = 3600.0
+# At most this many sessions' utterances are kept; the oldest goes first.
+REPLAY_SESSIONS = 32
 
 # Dictation state file (voxtype's default). Speech stops when it leaves "idle",
 # so Claude never talks over the user.
@@ -328,6 +330,8 @@ class Speaker:
             self.clips = {s: c for s, c in self.clips.items() if now - c.stored_at < REPLAY_KEEP}
             self.clips[job.session] = Clip(list(chunks), rate, now)
             self.last_clip = job.session
+            while len(self.clips) > REPLAY_SESSIONS:
+                del self.clips[min(self.clips, key=lambda s: self.clips[s].stored_at)]
 
     def _audio(self, job: Job):
         """Yield (samples, rate) per chunk: chunks already made (a replay), then synthesis of the rest."""
@@ -482,7 +486,13 @@ class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.speaker = speaker
         self.model_name = model_name
         self.last_used = time.time()
-        super().__init__(path, Handler)
+        # Only this user may connect (the socket can land in a shared /tmp). Set at bind, so
+        # there is no window; nothing else runs yet that could be affected by the umask.
+        old_umask = os.umask(0o177)
+        try:
+            super().__init__(path, Handler)
+        finally:
+            os.umask(old_umask)
 
     def touch(self) -> None:
         self.last_used = time.time()
