@@ -9,6 +9,7 @@ import threading
 import time
 import types
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,6 +55,7 @@ def speaker() -> "server.Speaker":
     sp.wake = threading.Condition(sp.state_lock)
     sp.queue, sp.current, sp.proc, sp.warm_proc = [], None, None, None
     sp.last_seen, sp.busy_until = {}, 0.0
+    sp.clips, sp.last_clip = {}, ""
     sp.voices = {"af_heart", "bm_george"}
     return sp
 
@@ -103,6 +105,72 @@ class SpeakerQueueTest(unittest.TestCase):
         sp = speaker()
         self.assertEqual(sp.resolve_voice("bm_george"), "bm_george")
         self.assertEqual(sp.resolve_voice("xx_nobody"), "af_heart")
+
+
+class ReplayTest(unittest.TestCase):
+    """Samples are opaque to the replay logic, so plain strings stand in for numpy arrays."""
+
+    def remembered(self, sp, session, chunks=("c1", "c2")):
+        sp._remember(server.Job(session, "text", "bm_george", 1.0), list(chunks), 24000)
+
+    def test_replay_plays_stored_chunks_without_synthesis(self):
+        sp = speaker()
+        sp.synth = mock.Mock(side_effect=AssertionError("synthesised on replay"))
+        self.remembered(sp, "a")
+        self.assertTrue(sp.replay())
+        self.assertEqual(list(sp._audio(sp.queue[0])), [("c1", 24000), ("c2", 24000)])
+
+    def test_replay_goes_first_and_interrupts_the_current_clip(self):
+        sp = speaker()
+        self.remembered(sp, "a")
+        sp.current = server.Job("b", "playing", "bm_george", 1.0)
+        sp.speak("queued", "bm_george", 1.0, session="c")
+        self.assertTrue(sp.replay("a"))
+        self.assertTrue(sp.current.cancelled)
+        self.assertEqual([(j.session, j.clip is not None) for j in sp.queue], [("a", True), ("c", False)])
+
+    def test_nothing_stored_or_unknown_session(self):
+        sp = speaker()
+        self.assertFalse(sp.replay())
+        self.remembered(sp, "a")
+        self.assertFalse(sp.replay("b"))
+        self.assertEqual(sp.queue, [])
+
+    def test_default_is_the_most_recent_session(self):
+        sp = speaker()
+        self.remembered(sp, "a", ["a1"])
+        self.remembered(sp, "b", ["b1"])
+        sp.replay()
+        self.assertEqual(sp.queue[0].clip.chunks, ["b1"])
+        sp.replay("a")
+        self.assertEqual(sp.queue[0].clip.chunks, ["a1"])
+
+    def test_replays_cut_off_speech_and_empty_results_are_not_kept(self):
+        sp = speaker()
+        cut = server.Job("a", "text", "bm_george", 1.0, cancelled=True)
+        sp._remember(cut, ["x"], 24000)
+        sp._remember(server.Job("a", "text", "bm_george", 1.0), [], 24000)
+        self.assertEqual(sp.clips, {})
+        self.remembered(sp, "a", ["kept"])
+        sp._remember(server.Job("a", "", "", 1.0, clip=sp.clips["a"]), ["replayed"], 24000)
+        self.assertEqual(sp.clips["a"].chunks, ["kept"])
+
+    def test_stale_sessions_are_dropped(self):
+        sp = speaker()
+        self.remembered(sp, "old")
+        sp.clips["old"].stored_at -= server.REPLAY_KEEP + 1
+        self.remembered(sp, "new")
+        self.assertEqual(set(sp.clips), {"new"})
+
+    def test_synthesis_stops_when_the_job_is_cancelled(self):
+        sp = speaker()
+        job = server.Job("a", "One sentence. " * 40, "bm_george", 1.0)
+
+        def synth(*_):
+            job.cancelled = True
+            return "s", 24000
+        sp.synth = synth
+        self.assertEqual(len(list(sp._audio(job))), 1)
 
 
 class WatchDictationTest(unittest.TestCase):

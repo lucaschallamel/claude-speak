@@ -15,6 +15,8 @@ github_issue: 4
 
 > [!note]- Progress updates
 >
+> - **2026-11-14**: [S3_EXECUTE] `/replay` endpoint, `claude-speak again`, README hotkeys with wrapper. 58 tests pass (10 new). Real Kokoro run: replay reached the player 84 ms after `again`, same clip, no synthesis.
+> - **2026-11-14**: [S2_PLAN] Plan with 5 alternatives and 7 risks: `pipeline-audit-trail/artifacts/US-004-s2-plan.md`.
 > - **2026-11-14**: [S1_KICKOFF] Scope refined, ACs sharpened, profile standard. Lucas decided: replay interrupts the current clip and keeps the queue; hotkeys use a README wrapper script. Kickoff: `pipeline-audit-trail/artifacts/US-004-s1-kickoff.md`.
 > - **2026-11-14**: [S0_SELECT] Story selected, Orca worktree and branch feature/US-004-instant-replay created, pipeline initiated.
 

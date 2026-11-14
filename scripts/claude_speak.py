@@ -14,6 +14,7 @@ Subcommands:
                     show or change settings (used by /speak-settings)
   say TEXT          speak arbitrary text; --out FILE writes a WAV instead
   stop              stop playback
+  again             replay the last thing said, without a new summary or synthesis
   status            show server and settings status
   setup             download the model and start the server
 """
@@ -840,6 +841,15 @@ def cmd_stop(args) -> None:
     print("claude-speak: stopped.")
 
 
+def cmd_again(args) -> None:
+    """Replay the last thing said, at once. Never starts the server: no server, nothing to replay."""
+    data = data_dir(args.data_dir)
+    status = 0
+    if server_health(data):
+        status, _ = request(data, "POST", "/replay", {"session": args.session or ""})
+    print("claude-speak: replaying." if status == 200 else "claude-speak: nothing to replay.")
+
+
 def cmd_status(args) -> None:
     data = data_dir(args.data_dir)
     health = server_health(data)
@@ -905,10 +915,13 @@ def main() -> None:
 
     for name in ("stop", "status", "setup"):
         sub.add_parser(name).add_argument("--data-dir")
+    p = sub.add_parser("again")
+    p.add_argument("--data-dir")
+    p.add_argument("--session")
 
     args, _unknown = parser.parse_known_args()
     handler = {"hook": cmd_hook, "_worker": cmd_worker, "speak": cmd_speak, "rephrase": cmd_rephrase, "auto": cmd_auto,
-               "config": cmd_config, "say": cmd_say, "stop": cmd_stop, "status": cmd_status, "setup": cmd_setup}[args.cmd]
+               "config": cmd_config, "say": cmd_say, "stop": cmd_stop, "status": cmd_status, "setup": cmd_setup, "again": cmd_again}[args.cmd]
     try:
         handler(args)
     except Exception as exc:

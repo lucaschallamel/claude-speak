@@ -16,6 +16,8 @@ Exits by itself after a period with nothing to do.
   POST /warm     play silence to wake the output device before speech is ready
   POST /synth    same body; returns the whole utterance as a WAV
   POST /stop     stop playback and clear the queue; {"session"} stops only that session
+  POST /replay   {"session"?}; replay that session's last utterance, or the most recent one,
+                 at once and without synthesis; 404 when there is none
 """
 
 from __future__ import annotations
@@ -74,6 +76,9 @@ STAY_AWAKE = 3.0
 # While another session has spoken this recently, speech starts with the name
 # of the project it came from.
 OTHERS_ACTIVE = 300.0
+
+# How long a session's last utterance is kept for /replay (in memory only).
+REPLAY_KEEP = 3600.0
 
 # Dictation state file (voxtype's default). Speech stops when it leaves "idle",
 # so Claude never talks over the user.
@@ -148,6 +153,14 @@ class Job:
     voice: str
     speed: float
     cancelled: bool = False
+    clip: Clip | None = None  # set on a replay: play these chunks instead of synthesising
+
+
+@dataclass
+class Clip:
+    chunks: list  # per-chunk samples, without the lead-in silence
+    rate: int
+    stored_at: float
 
 
 class Speaker:
@@ -169,6 +182,8 @@ class Speaker:
         self.queue: list[Job] = []
         self.current: Job | None = None
         self.last_seen: dict[str, float] = {}  # session -> last /speak time
+        self.clips: dict[str, Clip] = {}  # session -> last fully synthesised utterance
+        self.last_clip = ""  # session whose clip was stored most recently
         self.proc: subprocess.Popen | None = None
         self.warm_proc: subprocess.Popen | None = None
         self.busy_until = 0.0
@@ -264,6 +279,43 @@ class Speaker:
             self.busy_until = now + 3600
             self.wake.notify()
 
+    def replay(self, session: str = "") -> bool:
+        """Play a session's last utterance (default: the most recent) ahead of the queue.
+
+        It interrupts what is playing; queued speech plays after it. False when there is none.
+        """
+        with self.state_lock:
+            key = session or self.last_clip
+            clip = self.clips.get(key)
+            if not clip:
+                return False
+            self._cancel_current()
+            self.queue.insert(0, Job(key, "", "", 1.0, clip=clip))
+            self.busy_until = time.time() + 3600
+            self.wake.notify()
+            return True
+
+    def _remember(self, job: Job, chunks: list, rate: int) -> None:
+        """Keep a fully synthesised utterance for /replay; replays and cut-off speech are not kept."""
+        if job.clip or job.cancelled or not chunks:
+            return
+        with self.state_lock:
+            now = time.time()
+            self.clips = {s: c for s, c in self.clips.items() if now - c.stored_at < REPLAY_KEEP}
+            self.clips[job.session] = Clip(chunks, rate, now)
+            self.last_clip = job.session
+
+    def _audio(self, job: Job):
+        """Yield (samples, rate) per chunk: the stored clip on a replay, else fresh synthesis."""
+        if job.clip:
+            for samples in job.clip.chunks:
+                yield samples, job.clip.rate
+            return
+        for chunk in split_chunks(job.text):
+            if job.cancelled:
+                return
+            yield self.synth(chunk, job.voice, job.speed)
+
     def _loop(self) -> None:
         while True:
             with self.state_lock:
@@ -279,18 +331,18 @@ class Speaker:
                         self.busy_until = time.time()
 
     def _run(self, job: Job) -> None:
-        text, voice, speed = job.text, job.voice, job.speed
         if not self.player:
             log("no audio player found (tried afplay, pw-play, paplay, aplay, ffplay)")
             return
         clips: queue.Queue = queue.Queue(maxsize=2)
 
         def produce():
+            made, rate = [], 0
             try:
-                for i, chunk in enumerate(split_chunks(text)):
+                for i, (samples, rate) in enumerate(self._audio(job)):
                     if job.cancelled:
                         break
-                    samples, rate = self.synth(chunk, voice, speed)
+                    made.append(samples)
                     if i == 0:
                         lead = np.zeros(int(self.lead_in() * rate), samples.dtype)
                         samples = np.concatenate([lead, samples])
@@ -298,6 +350,7 @@ class Speaker:
                     with os.fdopen(fd, "wb") as fh:
                         fh.write(wav_bytes(samples, rate))
                     clips.put(path)
+                self._remember(job, made, rate)
             except Exception as exc:
                 log(f"synthesis failed: {exc}")
             finally:
@@ -356,6 +409,11 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/stop":
                 speaker.stop(str(body.get("session") or ""))
                 self._json(200, {"ok": True})
+            elif self.path == "/replay":
+                if speaker.replay(str(body.get("session") or "")):
+                    self._json(200, {"ok": True})
+                else:
+                    self._json(404, {"error": "nothing to replay"})
             elif self.path == "/warm":
                 speaker.warm()
                 self._json(202, {"ok": True})
@@ -373,7 +431,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(payload)
             else:
-                self._json(400, {"error": "expected /speak or /synth with text, /warm or /stop"})
+                self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop or /replay"})
         except Exception as exc:
             self._json(500, {"error": str(exc)})
 

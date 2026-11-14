@@ -209,3 +209,39 @@ The client (`scripts/claude_speak.py`) is stdlib-only Python. The voice server (
   Point `CLAUDE_SPEAK_DICTATION_STATE` at another state file to use a different tool.
 - **Hush on new prompt**: sending a new prompt stops that session's speech, whether it is playing, queued or still being summarized.
   Other sessions keep talking.
+- **Instant replay**: `claude-speak again` replays the last thing said at once, with no new
+  summary and no new synthesis. It interrupts what is playing; queued speech plays after it.
+  `/rephrase` stays the slower "say it differently". The server keeps each session's last
+  utterance in memory for an hour; with no server running there is nothing to replay.
+
+### Hotkeys
+
+Hotkeys run `claude-speak` outside Claude Code, where it can't find the plugin's server on its
+own, and the installed plugin's path changes with each version. Save this as
+`~/.local/bin/claude-speak` and make it executable (`chmod +x`):
+
+```sh
+#!/bin/sh
+# claude-speak for hotkeys: the newest installed plugin, talking to its server.
+root=$(ls -d "$HOME"/.claude/plugins/cache/claude-speak/claude-speak/*/ | sort -V | tail -n 1)
+export CLAUDE_SPEAK_DATA="${CLAUDE_SPEAK_DATA:-$HOME/.claude/plugins/data/claude-speak-claude-speak}"
+exec "${root}bin/claude-speak" "$@"
+```
+
+`claude-speak status` through it should show that data dir and `server: running`. Then bind
+keys, e.g. in Hyprland:
+
+```ini
+bind = SUPER, Escape, exec, ~/.local/bin/claude-speak stop
+bind = SUPER SHIFT, Escape, exec, ~/.local/bin/claude-speak again
+```
+
+or with Omarchy's Lua bindings (`~/.config/hypr/bindings.lua`):
+
+```lua
+o.bind("SUPER + Escape", "Stop Claude speaking", "~/.local/bin/claude-speak stop")
+o.bind("SUPER + SHIFT + Escape", "Replay what Claude said", "~/.local/bin/claude-speak again")
+```
+
+With no dictation state file (barge-in above), wrap your dictation key so it stops speech
+first, e.g. `~/.local/bin/claude-speak stop; voxtype record start`.

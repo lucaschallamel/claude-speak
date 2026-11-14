@@ -37,8 +37,8 @@ Errors from detached runs go to `claude-speak.log` in the data dir; the server w
 
 Two processes:
 
-- **Client** `scripts/claude_speak.py`: **stdlib only**. Hooks must start fast, so never add a dependency here. `bin/claude-speak` runs it with `python3`, or with `uv` as a fallback. It holds every subcommand: `hook`, `speak`, `rephrase`, `auto`, `config`, `say`, `stop`, `status`, `setup` and internal `_worker`.
-- **Server** `scripts/server.py`: a PEP 723 inline-deps script (`kokoro-onnx`, `numpy`) run with `uv run --script`. It keeps the model loaded and serves HTTP on a Unix socket in the data dir (`/health`, `/speak`, `/warm`, `/synth`, `/stop`). It downloads the model on first start, then plays chunk by chunk through `pw-play`/`paplay`/`aplay`/`afplay`. Speech is queued per session: a newer `/speak` from the same session replaces the older one. The server exits after `CLAUDE_SPEAK_IDLE_TIMEOUT` idle seconds. `ensure_server()` in the client starts it on demand.
+- **Client** `scripts/claude_speak.py`: **stdlib only**. Hooks must start fast, so never add a dependency here. `bin/claude-speak` runs it with `python3`, or with `uv` as a fallback. It holds every subcommand: `hook`, `speak`, `rephrase`, `auto`, `config`, `say`, `stop`, `again`, `status`, `setup` and internal `_worker`.
+- **Server** `scripts/server.py`: a PEP 723 inline-deps script (`kokoro-onnx`, `numpy`) run with `uv run --script`. It keeps the model loaded and serves HTTP on a Unix socket in the data dir (`/health`, `/speak`, `/warm`, `/synth`, `/stop`, `/replay`). It downloads the model on first start, then plays chunk by chunk through `pw-play`/`paplay`/`aplay`/`afplay`. Speech is queued per session: a newer `/speak` from the same session replaces the older one. The server exits after `CLAUDE_SPEAK_IDLE_TIMEOUT` idle seconds. `ensure_server()` in the client starts it on demand.
 
 Hook flow (`hooks/hooks.json`, all routed to `claude-speak hook`, dispatched on `hook_event_name` in `cmd_hook`):
 
