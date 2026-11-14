@@ -15,6 +15,7 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-14**: [S4_CODE_REVIEW] Fresh review PASS (3 low, 3 info); 4 fixed (CI numpy on 3.13, two test gaps, README), 2 accepted. Second grilling: 6 decisions (12-17); cold case fixed in this story (AC6), so S3 reopens.
 > - **2026-11-14**: [S3_EXECUTE] Lanes, preemption, resume and stale drop built in server and client; 21 new tests (99 total); real Kokoro run: question 0.72-1.02 s over a status line, 0.77 s after a reply's chunk, resume without repeats, stale line dropped.
 > - **2026-11-14**: [S2_PLAN] Plan written; grilling settled 7 more decisions (5-11): same-session status lines dropped, AC1 latency bar 1.5 s.
 > - **2026-11-14**: [S1_KICKOFF] Issue #5 re-read (no comments). Scope narrowed to cross-session preemption (same-session replacement already cuts at once); 4 decisions from Lucas; ACs 2 -> 5; challenge log 7 entries; standard profile kept.
@@ -39,6 +40,7 @@ Within one session this already holds: a newer `/speak` from the same session st
 - [ ] **AC2**: A status line is never spoken once 5 s have passed since its hook fired before it started: the worker drops it after a slow summary, and the server drops it after waiting in the queue. A status line that has started is not dropped for age.
 - [ ] **AC3**: A Stop summary interrupted by higher-priority speech resumes after it from its first unplayed chunk, reusing the chunks already made, with no chunk repeated or skipped. An interrupted status line is dropped.
 - [ ] **AC4**: Order is replay, then `urgent` (questions), then `normal` (Stop summaries, `/speak`), then `low` (status lines), first come first served within a lane. Any higher lane from another session cuts a playing status line at once. A replay still interrupts at once and goes first. Within a session, a newer question or Stop summary still replaces older speech, but a status line never replaces that session's question or summary (playing or queued): it is dropped.
+- [ ] **AC6**: Cold case: when a question arrives before another session's status line is audible and the output has been quiet for over 3 s, its first audio comes within a median of 3.0 s over 5 runs of the real flow (`/warm`, then `/speak`), and no run is slower than 5.6 s (the worst before the fix). Status lines are synthesised one sentence per chunk, so a question waits for at most one sentence of a status line it cuts.
 - [ ] **AC5**: `/speak` accepts `priority` (`urgent`, `normal`, `low`). A missing or unknown value means `normal`, so older clients behave as before. README, CLAUDE.md and the `server.py` docstring describe the field and the lanes.
 
 ## Technical Requirements
@@ -66,3 +68,12 @@ Lucas settled these in a grilling session after S2:
 9. `maybe_interject` keeps its idle gate: status lines still start only when nothing is speaking.
 10. AC1 has a latency pass bar of 1.5 s (see AC1).
 11. Wire values are `urgent`, `normal` and `low`.
+
+Lucas settled these in a second grilling session after S4:
+
+12. S5 records "trust boundary touched, not security-sensitive"; no full security audit.
+13. Hands-on listening happens at S6: a short script through `avatar-play`, judged by Lucas.
+14. The cold case is fixed in this story (AC6): low-lane jobs are split one sentence per chunk. Measured before the fix: a status line's synthesis takes 2.3-3.2 s and cannot be interrupted, the question's 0.74-0.98 s; the question's first audio came 2.85-5.59 s after its `/speak` with `/warm` (2.44-4.02 s without), on omarchy at load average 12. `/warm` does not help, because synthesis, not the device wake, dominates.
+15. The AC6 bar: a median of 5 runs under 3.0 s, no run slower than 5.6 s. The lead-in is not changed: it protects first words on Bluetooth.
+16. The fix goes back through S3, then a fresh S4 review of the new code, before S5.
+17. Upstream: offer the generic Quiet features (barge-in, hush, replay, lanes) to upstream together, after 0.4.0 has run for a while. No upstream action in this story.

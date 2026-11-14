@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S5_ARCH_SEC_COMP_REVIEW
+current_stage: S3_EXECUTE
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
@@ -53,7 +53,9 @@ stages:
       - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
     commit: ''
   S3_EXECUTE:
-    status: completed
+    status: in_progress
+    reopened_at: '2026-11-14T16:34:14Z'
+    reopened_reason: 'Second grilling after S4 (decisions 12-17): fix the cold case in this story (AC6, sentence chunks for status lines); decision 16 sends it through S3 and a fresh S4 again. Round 1 below completed 2026-11-14T14:18:39Z at c5b4be7.'
     completed_at: '2026-11-14T14:18:39Z'
     reviewers:
       - 'Author (Claude Code): AC self-review below'
@@ -73,7 +75,8 @@ stages:
       - 'Branch pushed to origin after the checkpoint commit'
     commit: 'c5b4be7'
   S4_CODE_REVIEW:
-    status: completed
+    status: pending
+    status_note: 'Round 1 (below) completed 2026-11-14T16:20:46Z on c5b4be7, fixes in 67f4419. Round 2, a fresh review of the AC6 change, follows the reopened S3 (decision 16).'
     completed_at: '2026-11-14T16:20:46Z'
     reviewed_commit: 'c5b4be7427fc6521636505854afde3acaba7c242'
     reviewers:
@@ -92,7 +95,8 @@ stages:
       - 'F5 Info fixed: README now says "hasn''t started within 5 seconds"'
       - 'F6 Info (author) accepted: a reply preempted by a question that is then cancelled pauses at the boundary and resumes at once; undoing it would need preempt provenance on every cancel path'
       - 'After fixes: python3 -m unittest discover tests 99 passed; numpy blocked 91 passed, 8 skipped; ruff clean'
-    commit: ''
+      - 'Fixes committed and pushed'
+    commit: '67f4419'
   S5_ARCH_SEC_COMP_REVIEW:
     { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY:
@@ -124,4 +128,4 @@ verified_claims: []
 pr_readiness:
   { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
 bypasses: []
-notes: ''
+notes: 'Second grilling (2026-11-14, after S4) settled decisions 12-17 in the story file and on issue #5 (comment 6880746792): S5 trust boundary touched, not security-sensitive; hands-on at S6; cold case fixed here (AC6); S3 reopened then fresh S4; upstream later as a batch. Cold baseline measured with scratchpad lanes/cold.py and synth_time.py on omarchy, load average 12: with /warm 3.17, 5.59, 2.85 s; without 4.02, 2.92, 2.44 s; synthesis status line 2.32-3.19 s, question 0.74-0.98 s.'
