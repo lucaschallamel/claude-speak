@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S1_KICKOFF
+current_stage: S2_PLAN
 status: active
 status_reason: ''
 initiated_at: '2026-11-14T10:38:45Z'
@@ -27,11 +27,17 @@ stages:
       - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
     commit: ''
   S1_KICKOFF:
-    status: pending
-    completed_at: ''
-    reviewers: []
-    evidence: []
-    commit: ''
+    status: completed
+    completed_at: '2026-11-14T10:42:43Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: two decisions via AskUserQuestion'
+    evidence:
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-004-s1-kickoff.md'
+      - 'Challenge log: 6 entries (standard minimum 3), all resolved'
+      - 'Story file updated: ACs 2 -> 5, technical requirements, decisions section'
+      - 'Decisions posted on issue #4 (comment 6876077878)'
+    commit: '15a963a'
   S2_PLAN:
     status: pending
     completed_at: ''
