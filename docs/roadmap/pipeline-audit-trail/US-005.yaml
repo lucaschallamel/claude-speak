@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S4_CODE_REVIEW
+current_stage: S5_ARCH_SEC_COMP_REVIEW
 round_3_completed_at: '2026-11-15T07:19:55Z'
 round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
 round_3_measurements:
@@ -104,10 +104,28 @@ stages:
     commit: 'c5b4be7'
   S4_CODE_REVIEW:
     status: completed
-    status_note: 'Two rounds. Round 1 completed 2026-11-14T16:20:46Z on c5b4be7, fixes in 67f4419. Round 2 reviewed the AC6 change (decision 16) on 30a7662.'
-    completed_at: '2026-11-14T16:54:23Z'
-    reviewed_commit: '30a7662ac16294365caf7cd9f0e470442627f763'
+    status_note: 'Three rounds. Round 1 completed 2026-11-14T16:20:46Z on c5b4be7, fixes in 67f4419. Round 2 reviewed the AC6 change (decision 16) on 30a7662. Round 3 reviewed the single chunk rule, stop-ahead and prefetch on f5e846a.'
+    completed_at: '2026-11-15T07:30:27Z'
+    reviewed_commit: 'f5e846a327605d4c9f0d279b70df6d61be5c03c7'
+    reviewed_commit_round_2: '30a7662ac16294365caf7cd9f0e470442627f763'
     reviewed_commit_round_1: 'c5b4be7427fc6521636505854afde3acaba7c242'
+    round_3_reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff 7ffdb5c f5e846a (scripts, tests, README, CLAUDE.md, systemPatterns), git diff main...f5e846a for context, CLAUDE.md; ran the suite, a 20,000-case split_chunks fuzz and a thread dump; Verdict dictated: no'
+      - 'Author pass: /ponytail:ponytail-review of 7ffdb5c..HEAD before the fresh report returned; it said "Looks good. Ship." and missed fresh finding 1 (recorded as such)'
+    round_3_evidence:
+      - 'Delegated to /cu:quality-review as a fresh-context review: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 4 low, 3 info (all fresh; author found none)'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'R3-F1 Low fixed: the resume branch on path None puts the end marker back before breaking, so drain() ends; test asserts no drain thread is left (thread names include the target); the test also makes the None path deterministic (producer stopped and marker queued before chunk 1 ends)'
+      - 'R3-F2 Low accepted with reason: clearing preempt after the producer has stopped ahead would make the consumer treat the end marker as finished and drop the rest of the reply; avoiding that needs a second flag or a producer restart, and the producer has almost always stopped ahead by the time a question can be cancelled, so the pause would remain; same pause as round-2 F6 (accepted), now longer by one chunk synthesis'
+      - 'R3-F3 Low fixed: synth(unless=) checks after taking synth_lock; _prefetch passes unless=lambda: job.cancelled, so a question replaced while waiting is not synthesised; test on synth with a fake Kokoro'
+      - 'R3-F4 Low fixed: AC6 reworded to the single CHUNK_CHARS rule; decision 14 marked superseded by 21'
+      - 'R3-F5 Info fixed: early-prefetch test asserts synth call_count == 1 while the question is blocked'
+      - 'R3-F6 Info fixed: prefetch test now speaks two urgent jobs (only the first is prefetched) with a label (the prefetched chunk starts with it)'
+      - 'R3-F7 Info deferred to S6 hands-on by design: more chunks per reply (spawns, intonation at comma cuts)'
+      - 'Mutation checks (scratchpad mutate.py; restored from a backup, cmp identical): end-marker put removed, unless check removed, queue[0] guard removed: each failed its test'
+      - 'After fixes: 109 passed with numpy; numpy blocked passed with 9 skipped; 12/12 parallel runs exit 0; ruff clean'
+      - 'No re-measurement: the fixes touch only an end marker, a cancelled-job check and tests, none on the timed paths of the quiet-machine run on 401e234 (S3 round 3)'
     round_2_reviewers:
       - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff 67f4419 30a7662 (scripts, tests, CLAUDE.md, systemPatterns), CLAUDE.md; ran the suite and a scratch experiment (old vs new split_chunks on 20,000 random inputs; per_sentence edge and loss checks); Verdict dictated: no'
       - 'Author pass after the fresh report (1 Info finding added)'

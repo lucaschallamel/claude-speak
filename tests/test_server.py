@@ -484,12 +484,16 @@ class LanesTest(unittest.TestCase):
     def test_a_question_s_first_chunk_is_made_while_the_reply_finishes_its_chunk(self):
         sp = speaker()
         self.playing(sp, "a", server.NORMAL)
-        sp.synth = mock.Mock(side_effect=lambda chunk, *_: (f"made {chunk}", 24000))
+        sp.synth = mock.Mock(side_effect=lambda chunk, *_, **__: (f"made {chunk}", 24000))
+        sp.last_seen["b"] = sp.last_seen["c"] = time.time()  # others active: the label is spoken
         text = "Question from session B. Which option do you want, the first or the second?"
-        sp.speak(text, "bf_emma", 1.0, "b", priority="urgent")
-        question = sp.queue[0]
+        sp.speak(text, "bf_emma", 1.0, "b", "my-proj", priority="urgent")
+        sp.speak("And this one?", "bf_emma", 1.0, "c", priority="urgent")
+        question, second = sp.queue[0], sp.queue[1]
         self.assertTrue(question.prefetched.wait(5), "prefetch did not finish")
-        first, *rest = server.split_chunks(text)
+        self.assertIsNone(second.prefetched)  # only the question that plays next is prefetched
+        first, *rest = server.split_chunks(f"my proj: {text}")
+        self.assertTrue(first.startswith("my proj: "))  # the label is part of the prefetched chunk
         self.assertEqual(question.clip.chunks, [f"made {first}"])
         # When the question plays, its first chunk is not synthesised again.
         self.assertEqual([c for c, _ in sp._audio(question)], [f"made {first}"] + [f"made {c}" for c in rest])
@@ -500,7 +504,7 @@ class LanesTest(unittest.TestCase):
         self.playing(sp, "a", server.NORMAL)
         release = threading.Event()
 
-        def synth(chunk, *_):
+        def synth(chunk, *_, **__):
             release.wait(5)  # the prefetch is still synthesising when the question starts
             return f"made {chunk}", 24000
         sp.synth = mock.Mock(side_effect=synth)
@@ -510,7 +514,8 @@ class LanesTest(unittest.TestCase):
         runner = threading.Thread(target=lambda: got.extend(sp._audio(question)))
         runner.start()
         time.sleep(0.1)
-        self.assertEqual(got, [])  # waiting for the prefetch, not synthesising chunk 1 itself
+        # Only the prefetch is synthesising: the question waits instead of making chunk 1 too.
+        self.assertEqual(sp.synth.call_count, 1)
         release.set()
         runner.join(5)
         self.assertEqual(got, [("made Which option?", 24000)])
@@ -525,7 +530,7 @@ class LanesTest(unittest.TestCase):
             question = server.Job("b", "Which option?", "bf_emma", 1.0, priority=0,
                                   cancelled=not cancel_during_synth, prefetched=threading.Event())
 
-            def synth(*_):
+            def synth(*_, **__):
                 question.cancelled = True  # e.g. session B was hushed while chunk 1 was made
                 return "s", 24000
             sp.synth = mock.Mock(side_effect=synth)
@@ -533,6 +538,15 @@ class LanesTest(unittest.TestCase):
             self.assertIsNone(question.clip)
             self.assertTrue(question.prefetched.is_set())  # its producer never waits forever
             self.assertEqual(sp.synth.call_count, int(cancel_during_synth))
+
+    def test_synth_skips_a_job_cancelled_while_it_waited_for_the_lock(self):
+        sp = speaker()
+        sp.synth_lock, sp.kokoro = threading.Lock(), mock.Mock()
+        sp.kokoro.create.return_value = ("s", 24000)
+        self.assertIsNone(sp.synth("hi", "af_heart", 1.0, unless=lambda: True))
+        sp.kokoro.create.assert_not_called()
+        self.assertEqual(sp.synth("hi", "af_heart", 1.0, unless=lambda: False), ("s", 24000))
+        self.assertEqual(sp.synth("hi", "af_heart", 1.0), ("s", 24000))
 
     def test_questions_and_replays_are_never_preempted_nor_a_lane_by_its_own(self):
         for priority, newcomer in [(0, "urgent"), (server.REPLAY_PRIORITY, "urgent"), (1, "normal")]:
@@ -656,18 +670,28 @@ class LanesTest(unittest.TestCase):
         sp = speaker()
         sp.player, sp.lead_in = ["true"], lambda: 0.0
         job = server.Job("a", THREE_CHUNKS, "bm_george", 1.0)
+        stopped = threading.Event()
 
         def audio(j):  # the producer stops at the preempt check with nothing queued (_audio)
-            yield np.ones(10, np.float32), 24000
-            wait_until(lambda: j.preempt)
+            try:
+                yield np.ones(10, np.float32), 24000
+                wait_until(lambda: j.preempt)
+            finally:
+                stopped.set()
 
         def preempt(n):
             job.preempt = True  # while chunk 1 plays, before the producer reaches chunk 2
+            stopped.wait(5)
+            time.sleep(0.05)  # the producer's end marker is queued before chunk 1 ends
         sp._audio = audio
+        before = set(threading.enumerate())
         with private_tmp():
             self.assertEqual(self.run_job(sp, job, preempt), [10])
         self.assertEqual(self.lanes(sp), [("a", server.NORMAL)])  # the rest is not lost
         self.assertEqual(sp.queue[0].played, 1)
+        self.assertTrue(wait_until(lambda: not [t for t in threading.enumerate()
+                                                if t not in before and "drain" in t.name]),
+                        "a drain thread was left waiting for an end marker it will never get")
 
     @unittest.skipIf(not hasattr(server.np, "zeros"), "needs numpy (the stub has none)")
     def test_no_resume_when_preempted_during_the_last_chunk_or_then_cancelled(self):

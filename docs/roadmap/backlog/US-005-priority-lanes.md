@@ -15,6 +15,7 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-15**: [S4_CODE_REVIEW] Round 3 PASS (4 low, 3 info): drain-thread leak and stale-prefetch synthesis fixed, AC6 reworded, tests tightened; the leftover pause after a cancelled question accepted with reason.
 > - **2026-11-15**: [S3_EXECUTE] Round 3 (from the S6 hands-on): one ~80-char chunk rule for all speech, stop-ahead and prefetch; quiet-machine measurement: status line median 0.74 s / worst 0.80 s, reply 0.00 s after the chunk, cold median 1.16 s / worst 1.39 s, stale dropped; 108 tests.
 > - **2026-11-14**: [S5_ARCH_SEC_COMP_REVIEW] Fresh arch/security review PASS (2 low, 4 info); trust boundary touched, not security-sensitive; huge `at` no longer cancels speech, docs and CI permissions tightened; release note for 0.4.0.
 > - **2026-11-14**: [S4_CODE_REVIEW] Round 2 PASS (2 low, 3 info); semicolon split, replay-truncation test, "about 80" wording.
@@ -44,7 +45,7 @@ Within one session this already holds: a newer `/speak` from the same session st
 - [ ] **AC2**: A status line is never spoken once 5 s have passed since its hook fired before it started: the worker drops it after a slow summary, and the server drops it after waiting in the queue. A status line that has started is not dropped for age.
 - [ ] **AC3**: A Stop summary interrupted by higher-priority speech resumes after it from its first unplayed chunk, reusing the chunks already made, with no chunk repeated or skipped. An interrupted status line is dropped.
 - [ ] **AC4**: Order is replay, then `urgent` (questions), then `normal` (Stop summaries, `/speak`), then `low` (status lines), first come first served within a lane. Any higher lane from another session cuts a playing status line at once. A replay still interrupts at once and goes first. Within a session, a newer question or Stop summary still replaces older speech, but a status line never replaces that session's question or summary (playing or queued): it is dropped.
-- [ ] **AC6**: Cold case: when a question arrives before another session's status line is audible and the output has been quiet for over 3 s, its first audio comes within a median of 3.0 s over 5 runs of the real flow (`/warm`, then `/speak`), and no run is slower than 5.6 s (the worst before the fix). Status lines are synthesised one sentence per chunk, with a sentence over about `CLAUSE_CHARS` (80) characters split at commas and semicolons, so a question waits for at most one short piece of a status line it cuts.
+- [ ] **AC6**: Cold case: when a question arrives before another session's status line is audible and the output has been quiet for over 3 s, its first audio comes within a median of 3.0 s over 5 runs of the real flow (`/warm`, then `/speak`), and no run is slower than 5.6 s (the worst before the fix). All speech is cut into chunks of about `CHUNK_CHARS` (80) characters: sentences, long ones split at commas and semicolons, short ones packed together (decision 21), so a question waits for at most one short chunk of a status line it cuts.
 - [ ] **AC5**: `/speak` accepts `priority` (`urgent`, `normal`, `low`). A missing or unknown value means `normal`, so older clients behave as before. README, CLAUDE.md and the `server.py` docstring describe the field and the lanes.
 
 ## Technical Requirements
@@ -77,7 +78,7 @@ Lucas settled these in a second grilling session after S4:
 
 12. S5 records "trust boundary touched, not security-sensitive"; no full security audit.
 13. Hands-on listening happens at S6: a short script through `avatar-play`, judged by Lucas.
-14. The cold case is fixed in this story (AC6): low-lane jobs are split one sentence per chunk. Measured before the fix: a status line's synthesis takes 2.3-3.2 s and cannot be interrupted, the question's 0.74-0.98 s; the question's first audio came 2.85-5.59 s after its `/speak` with `/warm` (2.44-4.02 s without), on omarchy at load average 12. `/warm` does not help, because synthesis, not the device wake, dominates.
+14. The cold case is fixed in this story (AC6): low-lane jobs are split one sentence per chunk (superseded by decision 21: one rule for all speech). Measured before the fix: a status line's synthesis takes 2.3-3.2 s and cannot be interrupted, the question's 0.74-0.98 s; the question's first audio came 2.85-5.59 s after its `/speak` with `/warm` (2.44-4.02 s without), on omarchy at load average 12. `/warm` does not help, because synthesis, not the device wake, dominates.
 15. The AC6 bar: a median of 5 runs under 3.0 s, no run slower than 5.6 s. The lead-in is not changed: it protects first words on Bluetooth.
 16. The fix goes back through S3, then a fresh S4 review of the new code, before S5.
 17. Upstream: offer the generic Quiet features (barge-in, hush, replay, lanes) to upstream together, after 0.4.0 has run for a while. No upstream action in this story.

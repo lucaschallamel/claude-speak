@@ -245,9 +245,12 @@ class Speaker:
     def resolve_voice(self, voice: str) -> str:
         return voice if voice in self.voices else "af_heart"
 
-    def synth(self, text: str, voice: str, speed: float) -> tuple[np.ndarray, int]:
+    def synth(self, text: str, voice: str, speed: float, unless=None) -> tuple[np.ndarray, int] | None:
+        """unless: checked once the lock is held; when true, nothing is synthesised (None)."""
         voice = self.resolve_voice(voice)
         with self.synth_lock:
+            if unless and unless():
+                return None
             return self.kokoro.create(text, voice=voice, speed=speed,
                                       lang=LANGS.get(voice[:1], "en-us"))
 
@@ -368,10 +371,11 @@ class Speaker:
         try:
             chunks = split_chunks(job.text)
             if chunks and not job.cancelled:
-                samples, rate = self.synth(chunks[0], job.voice, job.speed)
+                # A question replaced while this waited for the lock is not synthesised.
+                made = self.synth(chunks[0], job.voice, job.speed, unless=lambda: job.cancelled)
                 with self.state_lock:
-                    if not job.cancelled and job.clip is None:
-                        job.clip = Clip([samples], rate, time.time())
+                    if made and not job.cancelled and job.clip is None:
+                        job.clip = Clip([made[0]], made[1], time.time())
         except Exception as exc:  # the job then synthesises chunk 1 itself
             log(f"prefetch failed: {exc}")
         finally:
@@ -519,6 +523,7 @@ class Speaker:
             if path is None:
                 # The producer stops early when preempted (_audio); chunks left unplayed resume.
                 if job.preempt and job.played < len(split_chunks(job.text)):
+                    clips.put(None)  # put the end back: drain() below waits for it
                     break
                 return
             try:
