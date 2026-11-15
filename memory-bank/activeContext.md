@@ -39,7 +39,7 @@ S10 PR are next, then release 0.4.0.
 - [/] US-005: S9 close docs (story overview: permission prompts are US-006; AC order), S10 PR
       with the CI matrix green (numpy on 3.13), merge on approval, then the close PR.
 - [ ] Release 0.4.0 (brings `again`, the replay key and lanes to installs); laptop update block
-      includes `claude-speak stop` after updating (old server keeps running without lanes).
+      ends the running `server.py` after updating (the old server keeps running without lanes; `claude-speak stop` only stops playback).
 - [ ] After 0.4.0: `git fetch upstream`; then agent-avatar #7 (COPPER setup first).
 - [ ] Optional: show "in progress" on GitHub at S0 (an issue label), since `main` only shows a
       story's status after its merge.

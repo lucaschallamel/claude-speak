@@ -105,4 +105,4 @@ Lucas settled this at S7:
 
 ## Release notes (for 0.4.0)
 
-- After updating, run `claude-speak stop` (or wait up to `CLAUDE_SPEAK_IDLE_TIMEOUT`, 30 minutes): a server started by the old version keeps running without lanes until it exits (S5 finding 6). Put this in the laptop update block.
+- After updating, end the running server so the new code loads: `pkill -f 'server.py --data-dir .*claude-speak-claude-speak'` (or wait up to `CLAUDE_SPEAK_IDLE_TIMEOUT`, 30 minutes). `claude-speak stop` is not enough: it only stops playback, and the old server keeps running without lanes (S5 finding 6; corrected at the 0.4.0 release). Put this in the laptop update block.
