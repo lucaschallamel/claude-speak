@@ -29,16 +29,16 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
   returns as soon as its job is cancelled, and a drain thread deletes the cancelled producer's
   leftover files. This lets a replay or newer reply start at once instead of waiting for the chunk
   being synthesised. Covered by `ReplayTest` in `tests/test_server.py`. US-005 added the
-  preemption checks (`job.preempt`), the `played` count and the resume re-queue on the break path;
-  covered by `LanesTest`.
+  preemption checks (`job.preempt`), the `played` count, the resume re-queue on the break path
+  (also when the producer stopped early with nothing queued), and `_audio`'s stop-ahead on
+  preempt and wait for a prefetch; covered by `LanesTest`.
 - `Speaker.speak` and `Speaker._loop` in `scripts/server.py` (US-005): `speak` inserts by lane
   (`_enqueue`) instead of appending, drops a status line that would replace its session's question
   or reply, and preempts another session's lower-lane speech (`_preempt_for`). `_loop` picks jobs
   through `_next`, which drops stale status lines.
-- `split_chunks` in `scripts/server.py` (US-005): the packing loop moved into `_pack`, and a
-  `per_sentence` mode (status lines: one sentence, long ones split at commas and semicolons) was
-  added. Default
-  output is unchanged, covered by `SplitChunksTest`.
+- `split_chunks` and `CHUNK_CHARS` in `scripts/server.py` (US-005): chunks went from 250 to about
+  80 characters, split at sentences and, inside long sentences, at commas and semicolons (no
+  longer at colons); the packing loop moved into `_pack`. Covered by `SplitChunksTest`.
 - `Server.__init__` in `scripts/server.py` (US-004): binds the socket under umask `0o177`, so only
   the user can connect even when it falls back to a shared `/tmp`.
 

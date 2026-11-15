@@ -15,6 +15,7 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-15**: [S3_EXECUTE] Round 3 (from the S6 hands-on): one ~80-char chunk rule for all speech, stop-ahead and prefetch; quiet-machine measurement: status line median 0.74 s / worst 0.80 s, reply 0.00 s after the chunk, cold median 1.16 s / worst 1.39 s, stale dropped; 108 tests.
 > - **2026-11-14**: [S5_ARCH_SEC_COMP_REVIEW] Fresh arch/security review PASS (2 low, 4 info); trust boundary touched, not security-sensitive; huge `at` no longer cancels speech, docs and CI permissions tightened; release note for 0.4.0.
 > - **2026-11-14**: [S4_CODE_REVIEW] Round 2 PASS (2 low, 3 info); semicolon split, replay-truncation test, "about 80" wording.
 > - **2026-11-14**: [S3_EXECUTE] Round 2: status lines split into sentence and comma pieces; cold case median 3.2 -> 1.38 s, worst 5.59 -> 1.58 s; AC1 bar now a median (decision 19); 103 tests.
