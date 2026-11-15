@@ -27,10 +27,10 @@ round_3_measurements:
   - 'AC1 reply: question first audio 0.00 s after A''s chunk ended (2.95 s after its /speak), then the rest of A once each: PASS'
   - 'AC6 cold, 5 runs: 1.16, 1.34, 1.11, 1.02, 1.39 s: median 1.16 s (bar 3.0), worst 1.39 s (bar 5.6): PASS'
   - 'AC2 stale: 0 chunks played: PASS'
-status: active
+status: completed
 status_reason: ''
 initiated_at: '2026-11-14T13:51:42Z'
-completed_at: ''
+completed_at: '2026-11-15T11:28:03Z'
 stages:
   S0_SELECT:
     status: completed
@@ -255,10 +255,34 @@ stages:
       - 'user-story-validator: 16/16 pass, exit 0'
       - 'Close docs committed in the S9 commit below'
     commit: ''
-  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S10_MERGE:
+    status: completed
+    completed_at: '2026-11-15T11:28:03Z'
+    pr_head: '4d4961cf41c0374bdb5c7c8e0e7d19f6d3a47b71'
+    pr_url: 'https://github.com/lucaschallamel/claude-speak/pull/26'
+    merge_approval:
+      quote: 'Approved, merge the PR, go back to main, close cleanly this story, and advise about the best candidate to pick up next'
+      at: '2026-11-15T11:27:50Z'
+      head: '4d4961cf41c0374bdb5c7c8e0e7d19f6d3a47b71'
+    evidence:
+      - 'Battery on 4d4961c before PR creation: 112 passed, 0 failed, 0 skipped (numpy installed); bare mode 112 run, 9 skipped; ruff clean; py_compile ok; story validator 16/16; pipeline audit no failures; exit 0'
+      - 'PR #26 created with /cu:mr-create after Lucas chose option A (gates 0-6 pass; secret scan: no keys or tokens, only the co-author noreply address, the intended "closes #5"; private repository not linked)'
+      - 'CI on PR #26 at 4d4961c: unittest ubuntu/macos x 3.10/3.13, 4/4 pass; logs: the 3.13 jobs installed numpy-2.5.4 and ran 112 tests with 0 skipped; the 3.10 jobs ran 112 with 9 skipped'
+      - 'Before merge: PR head 4d4961c = approved head; origin/main had not moved (HEAD..origin/main = 0); MERGEABLE CLEAN'
+      - 'Merged on the platform: gh pr merge 26 --squash --match-head-commit 4d4961c (repository convention) -> b9b8f840a3715cda9d0ba304b11e42574dc407c4 at 2026-11-15T11:28:03Z; issue #5 closed by the merge'
+      - 'commit_count: 15'
+      - 'Changed after review: docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md, docs/roadmap/README.md, docs/roadmap/backlog/US-005-priority-lanes.md, docs/roadmap/pipeline-audit-trail/US-005.yaml, memory-bank/activeContext.md, memory-bank/archive/activeContext-archive.md, memory-bank/progress.md, memory-bank/systemPatterns.md, memory-bank/techContext.md, scripts/server.py, tests/test_server.py'
+      - 'Those changes came from: S5 delta fixes 9620c66 (scripts/server.py, tests/test_server.py, systemPatterns; after the S4 round-3 review f5e846a and S5 delta review 4620dda, read by the S7 review e9410f8), then S7-S9 bookkeeping and capture (after the S7 review e9410f8)'
+      - 'Ancestry check unverified: the squash merge leaves the reviewed commits off main, so pipeline_validator verify S10_MERGE ancestry is expected to fail; recorded here, pr_head not changed (Rule 07 Control 1)'
+      - 'Post-merge close: chore/US-005-close from main b9b8f84: story Done, card DONE, ROADMAP ticked, pipeline completed; its own PR needs a second approval (TD-205)'
+    commit: 'b9b8f84'
 closure_checks:
-  backlog_status: { status: pending, reason: '' }
-  board_status: { status: pending, reason: '' }
+  backlog_status:
+    status: pass
+    reason: 'Story status Done (post-merge close, TD-173)'
+  board_status:
+    status: pass
+    reason: 'KANBAN card DOING -> DONE; ROADMAP ticked'
   dev_journal:
     status: pass
     reason: 'docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md'
@@ -271,9 +295,12 @@ closure_checks:
   commit_evidence:
     status: pass
     reason: 'Checkpoint commits S1 b6a0539, S2 1be3c78, S3 c5b4be7/30a7662/401e234/f5e846a, S6 e9410f8, S9 close docs; every commit pushed after it (decision Q11)'
-  pr_readiness: { status: pending, reason: '' }
+  pr_readiness:
+    status: pass
+    reason: 'Branch clean, 15 commits ahead, 0 behind, pushed, battery exit 0, CI 4/4'
   pr_creation:
-    { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+    status: pass
+    reason: 'PR #26 created at S10 after all close docs were committed and pushed'
   deliverables_resolved:
     status: pass
     reason: 'Code, tests, docs and CI change delivered; S7 items 3 and 4 closed; item 2 accepted with reason; item 5 (CI numpy run) at S10'
@@ -329,6 +356,11 @@ verified_claims:
     scope: 'project'
     category: 'validator'
 pr_readiness:
-  { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+  status: pass
+  branch: 'feature/US-005-priority-lanes'
+  branch_clean: true
+  ready_for_pr: true
+  evidence:
+    - 'git status --porcelain empty at 4d4961c; HEAD..origin/main = 0; up to date with origin'
 bypasses: []
 notes: 'Second grilling (2026-11-14, after S4) settled decisions 12-17 in the story file and on issue #5 (comment 6880746792): S5 trust boundary touched, not security-sensitive; hands-on at S6; cold case fixed here (AC6); S3 reopened then fresh S4; upstream later as a batch. Cold baseline measured with scratchpad lanes/cold.py and synth_time.py on omarchy, load average 12: with /warm 3.17, 5.59, 2.85 s; without 4.02, 2.92, 2.44 s; synthesis status line 2.32-3.19 s, question 0.74-0.98 s.'

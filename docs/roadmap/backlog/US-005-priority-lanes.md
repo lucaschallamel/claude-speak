@@ -5,7 +5,7 @@ title: 'Priority lanes: urgent speech preempts chatty speech'
 epic: '2 Quiet'
 priority: 'Medium'
 story_points: 3
-status: 'In Progress'
+status: 'Done'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
@@ -15,6 +15,7 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-15**: [S10_MERGE] PR #26 squash-merged as b9b8f84 on Lucas's approval (CI 4/4 green, numpy tests ran on 3.13); issue #5 closed; story Done, card DONE, pipeline completed.
 > - **2026-11-15**: [S9_CLOSE] Close docs: AC1-AC6 met and ticked (AC1 on a quiet machine, decision 23); overview states permission prompts are US-006; AC5 before AC6. Status stays In Progress until the merge.
 > - **2026-11-15**: [S8_CAPTURE] Dev journal, memory bank (US-004 block archived) and README review captured.
 > - **2026-11-15**: [S7_CRITICAL_REVIEW] Fresh DoD check PASS (no clause fails; measured clauses WARN on the author's record); AC1 met on a quiet machine (decision 23).

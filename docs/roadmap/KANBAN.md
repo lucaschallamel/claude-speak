@@ -29,9 +29,9 @@ methodology: continuous-flow
 
 ## DOING
 
-- [/] [[US-005-priority-lanes]]
-
 ## DONE
+
+- [x] [[US-005-priority-lanes]]
 
 - [x] [[US-004-instant-replay-and-global-stop-replay]]
 
