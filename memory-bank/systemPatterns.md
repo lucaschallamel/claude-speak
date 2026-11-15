@@ -1,6 +1,6 @@
 # System patterns
 
-**Last Updated**: 2026-11-14
+**Last Updated**: 2026-11-15
 
 **Purpose**: architecture and the patterns that must hold. The full map is in
 [CLAUDE.md](../CLAUDE.md) (Architecture); this file records only what CLAUDE.md does not.
@@ -9,8 +9,8 @@
 
 Hooks call a stdlib client (`scripts/claude_speak.py`), which detaches a worker, summarises with a
 nested `claude -p`, and sends text to a Kokoro server (`scripts/server.py`) on a Unix socket. The
-server queues speech per session and plays it through a player command, which agent-avatar
-replaces.
+server queues speech by lane (replay, urgent, normal, low) and per session, and plays it chunk by
+chunk through a player command, which agent-avatar replaces.
 
 ## Patterns
 
@@ -48,6 +48,11 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
 - A dependency in the client.
 - Speaking our own skill replies (keep the `🔊`, `claude-speak:` and `No change.` prefixes).
 - Settings outside the precedence chain (`load_settings`).
+- Large speech chunks: Kokoro synthesis can't be interrupted, so preempting speech waits for the
+  chunk in flight and, over a reply, for the chunk playing (US-005: 250-char chunks meant a 15 s
+  wait). Keep `CHUNK_CHARS` small.
+- Trusting latency numbers taken under load: check the load average first and record it with every
+  measurement set (US-005: the same code measured 0.7-9.6 s at load 13-18).
 
 ## Decisions
 

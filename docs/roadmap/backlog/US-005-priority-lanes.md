@@ -15,6 +15,8 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-15**: [S8_CAPTURE] Dev journal, memory bank (US-004 block archived) and README review captured.
+> - **2026-11-15**: [S7_CRITICAL_REVIEW] Fresh DoD check PASS (no clause fails; measured clauses WARN on the author's record); AC1 met on a quiet machine (decision 23).
 > - **2026-11-15**: [S6_TEST_QUALITY_VERIFY] Gates pass on 9620c66 (112 tests, ruff, validator 16/16); hands-on through avatar-play confirmed by Lucas: question over a reply 2.0 s (was 15 s), seamless resume, natural pieces.
 > - **2026-11-15**: [S5_ARCH_SEC_COMP_REVIEW] Delta review PASS (3 low, 4 info); not security-sensitive; prefetch start failure handled, one prefetch worker at a time, chunk count split once.
 > - **2026-11-15**: [S4_CODE_REVIEW] Round 3 PASS (4 low, 3 info): drain-thread leak and stale-prefetch synthesis fixed, AC6 reworded, tests tightened; the leftover pause after a cancelled question accepted with reason.
@@ -43,7 +45,7 @@ Within one session this already holds: a newer `/speak` from the same session st
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: With another session's status line playing, an AskUserQuestion prompt cuts it at once. With another session's Stop summary playing, the prompt starts at that summary's next chunk boundary, never mid-chunk. Measured on real hardware from the question's `/speak` to its first audio at the player: over a status line, a median under 1.5 s over 5 runs with no run over 2.5 s (decision 19); over a summary, within the rest of the playing chunk plus 1.5 s.
+- [ ] **AC1**: With another session's status line playing, an AskUserQuestion prompt cuts it at once. With another session's Stop summary playing, the prompt starts at that summary's next chunk boundary, never mid-chunk. Measured on real hardware from the question's `/speak` to its first audio at the player: over a status line, a median under 1.5 s over 5 runs with no run over 2.5 s (decision 19), on a quiet machine (decision 23); over a summary, within the rest of the playing chunk plus 1.5 s.
 - [ ] **AC2**: A status line is never spoken once 5 s have passed since its hook fired before it started: the worker drops it after a slow summary, and the server drops it after waiting in the queue. A status line that has started is not dropped for age.
 - [ ] **AC3**: A Stop summary interrupted by higher-priority speech resumes after it from its first unplayed chunk, reusing the chunks already made, with no chunk repeated or skipped. An interrupted status line is dropped.
 - [ ] **AC4**: Order is replay, then `urgent` (questions), then `normal` (Stop summaries, `/speak`), then `low` (status lines), first come first served within a lane. Any higher lane from another session cuts a playing status line at once. A replay still interrupts at once and goes first. Within a session, a newer question or Stop summary still replaces older speech, but a status line never replaces that session's question or summary (playing or queued): it is dropped.
@@ -92,6 +94,10 @@ Lucas settled these at the S6 hands-on (through `avatar-play`):
 20. Status-line pauses sound natural. A status line cut by another session's question sounds right: a cut, a short pause, then the question.
 21. A question over a reply waited about 15 s, for the reply's whole 250-character chunk. All speech now uses one chunking rule: sentences, long ones split at commas and semicolons, short ones packed to about 80 characters (`CHUNK_CHARS = 80`). The separate status-line mode is gone.
 22. With small chunks the reply's producer is always synthesising ahead, so the question waited for its own synthesis after the boundary (about 2 s under load). Now the preempted reply stops synthesising, and the question's first chunk is synthesised while the reply's chunk finishes (`_prefetch`). Measured: the question starts 0.01 s after the reply's chunk ends.
+
+Lucas settled this at S7:
+
+23. AC1's status-line bar is met on a quiet machine (other heavy sessions paused): 10 runs, median 0.74 s, worst 0.80 s. Known limit: Kokoro synthesis slows under CPU load, so with several busy sessions the worst run can exceed 2.5 s (measured 2.69 s at load 6.6-9.3 and up to 5.44 s at load 13-18, both with prefetch). Accepted as is; smaller chunks are the lever if it shows up in daily use.
 
 ## Release notes (for 0.4.0)
 

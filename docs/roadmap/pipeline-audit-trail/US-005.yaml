@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S7_CRITICAL_REVIEW
+current_stage: S9_CLOSE
 round_3_completed_at: '2026-11-15T07:19:55Z'
 round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
 round_3_measurements:
@@ -40,7 +40,7 @@ stages:
       - 'Branch feature/US-005-priority-lanes created; session moved in with EnterWorktree'
       - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
       - 'pipeline_validator audit at init: passed, exit 0'
-    commit: ''
+    commit: 'b6a0539 (S0 changes committed with S1)'
   S1_KICKOFF:
     status: completed
     completed_at: '2026-11-14T13:58:28Z'
@@ -65,7 +65,7 @@ stages:
       - 'Alternatives: 5 considered and rejected (heapq/lanes, client-side stop, re-synthesis resume, cut-all, pre-synthesis)'
       - 'What could go wrong: 8 risks (W1-W8) each with a check; test plan maps every AC'
       - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
-    commit: ''
+    commit: '1be3c78'
   S3_EXECUTE:
     status: completed
     round_2_completed_at: '2026-11-14T16:46:15Z'
@@ -198,7 +198,7 @@ stages:
       - 'S5-F5 Info partly fixed: workflow gets permissions: contents: read; numpy keeps the >=2,<3 range, the same as server.py''s inline deps (an exact pin would drift from it)'
       - 'S5-F6 Info recorded: story "Release notes (for 0.4.0)": run claude-speak stop after updating; goes into the laptop update block'
       - 'After fixes: 105 passed with numpy; numpy blocked passed with 8 skipped; ruff clean; workflow YAML parses'
-    commit: ''
+    commit: '7ffdb5c (round 1 fixes); 9620c66 (delta fixes)'
   S6_TEST_QUALITY_VERIFY:
     status: completed
     completed_at: '2026-11-15T10:53:10Z'
@@ -213,17 +213,52 @@ stages:
       - 'Round 2 log, scenario 3: Emma''s /speak at 32.52 s; George''s chunk ended 34.51 s; Emma started 34.54 s (2.0 s wait, 0.03 s after the boundary; was ~15 s); then George''s remaining 6 chunks once each, ~30 ms between chunks'
       - 'Lucas by ear: Emma quick; George resumed seamlessly, nothing repeated or missing; 80-char reply pieces natural; status line pauses and cut fine; avatar mouth moved for both voices'
       - 'claude plugin validate: exit 1 only on the reserved plugin name (kept by decision, grilling Q4) plus an informational CLI note about the marketplace manifest; .claude-plugin/ unchanged by this story'
+    commit: 'e9410f8'
+  S7_CRITICAL_REVIEW:
+    status: completed
+    completed_at: '2026-11-15T11:03:12Z'
+    reviewed_commit: 'e9410f80a8f6d8e7bda30451e206c7b8c0f69c77'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/dod-verify.md, fresh-context-review.md, story US-005, git diff main...e9410f8, pipeline_validator status output (scratchpad us005-status.json), CLAUDE.md; also the measurement lines of US-005.yaml at the author''s request, which dod-verify.md forbids: the reviewer flagged the conflict and marked measured clauses WARN rather than PASS; ran the suite (112 OK; numpy blocked 9 skipped); Verdict dictated: no'
+      - 'Author pass after the fresh report: WARN reasons confirmed; added that 9620c66 had no dedicated fresh review but was read by this S7 reviewer and will be listed as changed after review at S10'
+    evidence:
+      - 'Delegated to /cu:dod-verify as a fresh-context review: PASS (no clause FAIL)'
+      - '21 clauses: 16 PASS with code and test cited at path:line; 4 WARN (AC1c, AC1d, AC6a, TR4: measured clauses resting on the author''s record); general DoD: 6 WARN, 1 SKIP (no CHANGELOG), rest PASS'
+      - 'Challenge log (standard: 2 perspectives x 2 entries): User 1 multi-session load is when lanes matter and the loaded tail exceeds 2.5 s (decision 23); User 2 "two sessions" were two session ids from one script, same server path as two Claude sessions, real path covered by the avatar-play hands-on; Maintainer 1 every code change had a fresh review except 9620c66 (read by S7, listed at S10); Maintainer 2 upstream divergence grew, documented in systemPatterns, decision 17'
+      - 'Decision 23 (Lucas, via AskUserQuestion: "Accept: bar holds on a quiet machine"): AC1 reworded to "on a quiet machine"; loaded tail recorded as a known limit'
+      - 'User disposition: [A] accept and advance ("continue ro s8")'
+      - 'Item 2 (re-measure cold and reply on the final commit) not run, accepted: the AC6 set is on 401e234; 4620dda and 9620c66 change only the end-marker put, synth(unless=), prefetch worker and chunk-count caching, none on the cold path; the reply case was re-checked on 9620c66 (0.00 s) at S5'
+      - 'Item 3 (story overview still names permission prompts; AC5 listed after AC6): folded into the S9 story update'
+      - 'Item 4 (stage commits and round-3/delta reviewer lines): filled in this record (S0, S2, S5, S6 commits; S4 round_3_reviewers and S5 delta_reviewers already name their diff ranges)'
+      - 'Items 5 (CI numpy on 3.13) and 6 (readme_review, pr_readiness): S10 and S8/S9'
     commit: ''
-  S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
-  S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S8_CAPTURE:
+    status: completed
+    completed_at: '2026-11-15T11:07:12Z'
+    reviewers:
+      - 'Author (Claude Code): /cu:dev-journal, /cu:memory-update, /cu:readme-update invoked in that order'
+    evidence:
+      - 'docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md'
+      - '/cu:dev-journal created the entry above (exists on disk, staged)'
+      - '/cu:memory-update: activeContext.md (US-005 session block, current phase, next steps; resolved items removed), progress.md (works, milestone, known issues incl. the loaded-tail limit, decision log, history), systemPatterns.md (architecture line by lane, two anti-patterns, date), techContext.md (date; CI note updated at S5); projectbrief.md and productContext.md reviewed, unchanged (no scope or product change)'
+      - 'prune-memory-bank.py: rolled the US-004 session block to archive/activeContext-archive.md; the script appended it at the end, so it was moved to the top (newest first) with content verified unchanged (same bytes, same characters); --check: PARTIAL, budget table not readable from this repo (sizes not checked)'
+      - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed: no docs/memory-bank); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line, so counts not checked)'
+      - '/cu:readme-update: READMEs in scope: README.md (Priority lanes section already current), docs/roadmap/README.md (tree generalised to <ID>.yaml, date), docs/dev-journal/README.md (generic, unchanged); scripts/, tests/, memory-bank/, .github/ have no README by repository convention, none created'
+    commit: ''
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
 closure_checks:
   backlog_status: { status: pending, reason: '' }
   board_status: { status: pending, reason: '' }
-  dev_journal: { status: pending, reason: '' }
-  memory_bank: { status: pending, reason: '' }
-  readme_review: { status: pending, reason: '' }
+  dev_journal:
+    status: pass
+    reason: 'docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md'
+  memory_bank:
+    status: pass
+    reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-004 block archived; consistency PASS with COPPER_DOCS_ROOT=.'
+  readme_review:
+    status: pass
+    reason: '/cu:readme-update ran: docs/roadmap/README.md updated; README.md and docs/dev-journal/README.md current'
   commit_evidence: { status: pending, reason: '' }
   pr_readiness: { status: pending, reason: '' }
   pr_creation:

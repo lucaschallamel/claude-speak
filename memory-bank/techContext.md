@@ -1,6 +1,6 @@
 # Tech context
 
-**Last Updated**: 2026-11-14
+**Last Updated**: 2026-11-15
 
 **Purpose**: stack, setup and tools. Commands are in [CLAUDE.md](../CLAUDE.md) (Commands).
 
