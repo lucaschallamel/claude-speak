@@ -539,6 +539,48 @@ class LanesTest(unittest.TestCase):
             self.assertTrue(question.prefetched.is_set())  # its producer never waits forever
             self.assertEqual(sp.synth.call_count, int(cancel_during_synth))
 
+    def test_a_prefetch_that_cannot_start_never_leaves_its_question_waiting(self):
+        sp = speaker()
+        self.playing(sp, "a", server.NORMAL)
+        with mock.patch.object(server.threading.Thread, "start", side_effect=RuntimeError("limit")):
+            sp.speak("Which option?", "bf_emma", 1.0, "b", priority="urgent")
+        question = sp.queue[0]
+        self.assertTrue(question.prefetched.is_set())  # its producer won't wait forever
+        self.assertIsNone(sp.prefetcher)
+        sp.synth = mock.Mock(side_effect=lambda chunk, *_, **__: (chunk, 24000))
+        self.assertEqual([c for c, _ in sp._audio(question)], ["Which option?"])  # makes it itself
+
+    def test_one_prefetch_worker_at_a_time_which_takes_the_newest_question(self):
+        sp = speaker()
+        self.playing(sp, "a", server.NORMAL)
+        release = threading.Event()
+
+        def synth(chunk, *_, unless=None):
+            release.wait(5)  # the first prefetch is slow
+            return None if unless and unless() else (f"made {chunk}", 24000)
+        sp.synth = mock.Mock(side_effect=synth)
+        sp.speak("First question?", "bf_emma", 1.0, "b", priority="urgent")
+        first = sp.queue[0]
+        worker = sp.prefetcher
+        sp.speak("Second question?", "bf_emma", 1.0, "b", priority="urgent")  # replaces the first
+        second = sp.queue[0]
+        sp.speak("Third question?", "bf_emma", 1.0, "b", priority="urgent")  # replaces the second
+        third = sp.queue[0]
+        self.assertIs(sp.prefetcher, worker)  # no second thread started
+        self.assertTrue(second.prefetched.is_set())  # replaced before its turn: never waits
+        release.set()
+        self.assertTrue(third.prefetched.wait(5))
+        self.assertTrue(wait_until(lambda: sp.prefetcher is None))
+        self.assertIsNone(first.clip)  # cancelled while it was being made
+        self.assertIsNone(second.clip)
+        self.assertEqual(third.clip.chunks, ["made Third question?"])
+
+    def test_a_job_splits_its_text_once_for_its_chunk_count(self):
+        job = server.Job("a", "One sentence. " * 15, "bm_george", 1.0)
+        with mock.patch.object(server, "split_chunks", wraps=server.split_chunks) as split:
+            self.assertEqual((job.chunk_count(), job.chunk_count()), (3, 3))
+        split.assert_called_once()
+
     def test_synth_skips_a_job_cancelled_while_it_waited_for_the_lock(self):
         sp = speaker()
         sp.synth_lock, sp.kokoro = threading.Lock(), mock.Mock()

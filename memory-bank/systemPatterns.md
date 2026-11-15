@@ -34,7 +34,8 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
   preempt and wait for a prefetch; covered by `LanesTest`.
 - `Speaker.speak` and `Speaker._loop` in `scripts/server.py` (US-005): `speak` inserts by lane
   (`_enqueue`) instead of appending, drops a status line that would replace its session's question
-  or reply, and preempts another session's lower-lane speech (`_preempt_for`). `_loop` picks jobs
+  or reply, and preempts another session's lower-lane speech (`_preempt_for`, which also hands
+  the next question's first chunk to a single `_prefetch` worker). `_loop` picks jobs
   through `_next`, which drops stale status lines.
 - `split_chunks` and `CHUNK_CHARS` in `scripts/server.py` (US-005): chunks went from 250 to about
   80 characters, split at sentences and, inside long sentences, at commas and semicolons (no

@@ -194,6 +194,13 @@ class Job:
     played: int = 0       # chunks fully played; a resumed job starts after them
     preempt: bool = False  # stop at the next chunk boundary, then resume
     prefetched: threading.Event | None = None  # set once _prefetch has made (or failed) chunk 1
+    count: int = -1  # chunks in text, split once (chunk_count()); -1: not split yet
+
+    def chunk_count(self) -> int:
+        if self.count < 0:
+            self.count = len(split_chunks(self.text))
+        return self.count
+
 
 @dataclass
 class Clip:
@@ -219,6 +226,9 @@ class Speaker:
     or queued, since that reply is out of date; a status line never replaces a question
     or reply, it is dropped instead.
     """
+
+    prefetcher: threading.Thread | None = None  # the one _prefetch worker running, if any
+    prefetch_next: Job | None = None  # the question it makes chunk 1 for next
 
     def __init__(self, kokoro: Kokoro, player: list[str] | None, silence: Path):
         self.kokoro = kokoro
@@ -363,23 +373,40 @@ class Speaker:
             cur.preempt = True
             if self.queue and self.queue[0] is job and job.prefetched is None:
                 job.prefetched = threading.Event()
-                threading.Thread(target=self._prefetch, args=(job,), daemon=True).start()
+                if self.prefetcher:  # one worker at a time: it takes the newest question next
+                    if self.prefetch_next:
+                        self.prefetch_next.prefetched.set()  # replaced before its turn
+                    self.prefetch_next = job
+                    return
+                try:
+                    self.prefetcher = threading.Thread(target=self._prefetch, args=(job,), daemon=True)
+                    self.prefetcher.start()
+                except RuntimeError as exc:  # can't start a thread: the job makes chunk 1 itself
+                    log(f"prefetch not started: {exc}")
+                    self.prefetcher = None
+                    job.prefetched.set()
 
-    def _prefetch(self, job: Job) -> None:
+    def _prefetch(self, job: Job | None) -> None:
         """Make a job's first chunk while the reply it preempts finishes its chunk, so it
-        starts right at the boundary instead of after its own synthesis."""
-        try:
-            chunks = split_chunks(job.text)
-            if chunks and not job.cancelled:
-                # A question replaced while this waited for the lock is not synthesised.
-                made = self.synth(chunks[0], job.voice, job.speed, unless=lambda: job.cancelled)
-                with self.state_lock:
-                    if made and not job.cancelled and job.clip is None:
-                        job.clip = Clip([made[0]], made[1], time.time())
-        except Exception as exc:  # the job then synthesises chunk 1 itself
-            log(f"prefetch failed: {exc}")
-        finally:
-            job.prefetched.set()
+        starts right at the boundary instead of after its own synthesis. Then the next job
+        handed over by _preempt_for, until there is none."""
+        while job:
+            try:
+                chunks = split_chunks(job.text)
+                if chunks and not job.cancelled:
+                    # A question replaced while this waited for the lock is not synthesised.
+                    made = self.synth(chunks[0], job.voice, job.speed, unless=lambda: job.cancelled)
+                    with self.state_lock:
+                        if made and not job.cancelled and job.clip is None:
+                            job.clip = Clip([made[0]], made[1], time.time())
+            except Exception as exc:  # the job then synthesises chunk 1 itself
+                log(f"prefetch failed: {exc}")
+            finally:
+                job.prefetched.set()
+            with self.state_lock:
+                job, self.prefetch_next = self.prefetch_next, None
+                if job is None:
+                    self.prefetcher = None
 
     @staticmethod
     def _resumed(job: Job) -> Job:
@@ -430,7 +457,7 @@ class Speaker:
         Speech stopped before all its chunks were made is not kept. A replay is kept like any
         other speech: it is the same audio, now the last thing said.
         """
-        whole = len(split_chunks(job.text)) or (len(job.clip.chunks) if job.clip else 0)
+        whole = job.chunk_count() or (len(job.clip.chunks) if job.clip else 0)
         if not chunks or len(chunks) < whole:
             return
         with self.state_lock:
@@ -522,7 +549,7 @@ class Speaker:
                 continue
             if path is None:
                 # The producer stops early when preempted (_audio); chunks left unplayed resume.
-                if job.preempt and job.played < len(split_chunks(job.text)):
+                if job.preempt and job.played < job.chunk_count():
                     clips.put(None)  # put the end back: drain() below waits for it
                     break
                 return

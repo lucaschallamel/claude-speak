@@ -15,6 +15,7 @@ github_issue: 5
 
 > [!note]- Progress updates
 >
+> - **2026-11-15**: [S5_ARCH_SEC_COMP_REVIEW] Delta review PASS (3 low, 4 info); not security-sensitive; prefetch start failure handled, one prefetch worker at a time, chunk count split once.
 > - **2026-11-15**: [S4_CODE_REVIEW] Round 3 PASS (4 low, 3 info): drain-thread leak and stale-prefetch synthesis fixed, AC6 reworded, tests tightened; the leftover pause after a cancelled question accepted with reason.
 > - **2026-11-15**: [S3_EXECUTE] Round 3 (from the S6 hands-on): one ~80-char chunk rule for all speech, stop-ahead and prefetch; quiet-machine measurement: status line median 0.74 s / worst 0.80 s, reply 0.00 s after the chunk, cold median 1.16 s / worst 1.39 s, stale dropped; 108 tests.
 > - **2026-11-14**: [S5_ARCH_SEC_COMP_REVIEW] Fresh arch/security review PASS (2 low, 4 info); trust boundary touched, not security-sensitive; huge `at` no longer cancels speech, docs and CI permissions tightened; release note for 0.4.0.

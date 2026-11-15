@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S5_ARCH_SEC_COMP_REVIEW
+current_stage: S6_TEST_QUALITY_VERIFY
 round_3_completed_at: '2026-11-15T07:19:55Z'
 round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
 round_3_measurements:
@@ -163,8 +163,25 @@ stages:
     commit: '67f4419'
   S5_ARCH_SEC_COMP_REVIEW:
     status: completed
-    completed_at: '2026-11-14T17:01:49Z'
-    reviewed_commit: '70fd3f3f856ce01cf9568212b0963c1317f044a5'
+    completed_at: '2026-11-15T07:39:08Z'
+    reviewed_commit: '4620ddad6f77c9e5bf9a98591f7b38fe9808e11f'
+    reviewed_commit_round_1: '70fd3f3f856ce01cf9568212b0963c1317f044a5'
+    delta_reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story US-005, git diff 7ffdb5c 4620dda, git diff main...4620dda (scripts, .github) for context, CLAUDE.md, trust-boundary-paths.json read from main; ran the suite and a stub-Kokoro experiment (200 urgent /speak from one session during a preempt window: 200 prefetch threads); Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed delta finding 1 in the code (Event set before Thread.start, unbounded wait in _audio); no new findings'
+    delta_evidence:
+      - 'Delegated to /cu:arch-review as a fresh-context review of the delta since the round-1 S5 (7ffdb5c..4620dda): PASS'
+      - 'trust boundary touched, not security-sensitive: the delta changes scripts/server.py (on the list read from main) but adds no endpoint, request field, file or network access; the socket stays user-only; the changes are internal scheduling (chunk size, prefetch worker, stop-ahead, synth unless); every exhaustion path found was already reachable through /synth before the delta; the fresh reviewer agreed independently'
+      - 'Findings: 0 critical, 0 high, 0 medium, 3 low, 4 info (all fresh)'
+      - 'Risk register (fresh): R1 playback stuck on an unset prefetch Event L/M (fixed); R2 urgent flood churns prefetch threads L/L (mitigated: one worker); R3 smaller chunks add audible gaps M/L (S6 hands-on); R4 upstream merge conflicts M/L (systemPatterns divergences, decision 17); R5 quadratic re-split of huge texts L/L (fixed)'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'D-F1 Low fixed: the prefetch thread starts inside try; on RuntimeError the Event is set and the job makes chunk 1 itself; test patches Thread.start to raise'
+      - 'D-F2 Low mitigated (recommended accept, user asked to mitigate all): one prefetch worker at a time; a question arriving while it runs is handed over (prefetch_next), a question replaced before its turn has its Event set; test: three questions from one session start one thread and only the newest gets a clip'
+      - 'D-F3 Low fixed: Job.chunk_count() splits the text once; used by _remember and the resume branch; test counts split_chunks calls'
+      - 'D-F4 Info: more chunks per reply, checked by ear at the S6 hands-on; D-F5..F7 Info: lifecycle, lock ordering and compliance verified, no action'
+      - 'Mutation checks (scratchpad mutate.py; restored from a backup, cmp identical): start failure unhandled, a thread per question, chunk count not cached: each failed its test'
+      - 'After fixes: 112 passed with numpy; numpy blocked passed with 9 skipped; 12/12 parallel runs exit 0; ruff clean'
+      - 'Regression timing (load 3.4 to 4.5): status line 0.59, 0.64, 0.74, 0.79, 0.79 s; reply 0.00 s after the chunk; stale 0 chunks'
     reviewers:
       - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story US-005, git diff main...70fd3f3, CLAUDE.md, memory-bank/systemPatterns.md and techContext.md, trust-boundary-paths.json read from main; ran the suite and a float overflow experiment; Verdict dictated: no'
       - 'Author pass after the fresh report: confirmed finding 1 (float(10**400) raises OverflowError; the handler catches Exception and returns 500 after _cancel_session ran); no new findings'
