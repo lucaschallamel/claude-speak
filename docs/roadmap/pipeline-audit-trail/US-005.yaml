@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S9_CLOSE
+current_stage: S10_MERGE
 round_3_completed_at: '2026-11-15T07:19:55Z'
 round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
 round_3_measurements:
@@ -245,7 +245,16 @@ stages:
       - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed: no docs/memory-bank); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line, so counts not checked)'
       - '/cu:readme-update: READMEs in scope: README.md (Priority lanes section already current), docs/roadmap/README.md (tree generalised to <ID>.yaml, date), docs/dev-journal/README.md (generic, unchanged); scripts/, tests/, memory-bank/, .github/ have no README by repository convention, none created'
     commit: ''
-  S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S9_CLOSE:
+    status: completed
+    completed_at: '2026-11-15T11:09:12Z'
+    evidence:
+      - '/cu:story-update: AC1-AC6 ticked as met (AC1 on a quiet machine, decision 23); story overview states permission prompts are out of scope (US-006 reuses the urgent lane), closing S7 item 3; AC5 moved before AC6; S9 progress entry; last_modified 2026-11-15'
+      - 'Story status stays In Progress (Done and card DONE move at the post-merge close, TD-173)'
+      - '/cu:readme-update: ran at S8 (docs/roadmap/README.md updated); since then only the story file changed, so no README needed changes'
+      - 'user-story-validator: 16/16 pass, exit 0'
+      - 'Close docs committed in the S9 commit below'
+    commit: ''
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
 closure_checks:
   backlog_status: { status: pending, reason: '' }
@@ -259,12 +268,18 @@ closure_checks:
   readme_review:
     status: pass
     reason: '/cu:readme-update ran: docs/roadmap/README.md updated; README.md and docs/dev-journal/README.md current'
-  commit_evidence: { status: pending, reason: '' }
+  commit_evidence:
+    status: pass
+    reason: 'Checkpoint commits S1 b6a0539, S2 1be3c78, S3 c5b4be7/30a7662/401e234/f5e846a, S6 e9410f8, S9 close docs; every commit pushed after it (decision Q11)'
   pr_readiness: { status: pending, reason: '' }
   pr_creation:
     { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
-  deliverables_resolved: { status: pending, reason: '' }
-  dod_verified: { status: pending, reason: '' }
+  deliverables_resolved:
+    status: pass
+    reason: 'Code, tests, docs and CI change delivered; S7 items 3 and 4 closed; item 2 accepted with reason; item 5 (CI numpy run) at S10'
+  dod_verified:
+    status: pass
+    reason: '/cu:dod-verify at S7 (fresh): PASS, no clause FAIL; measured clauses WARN on the author''s record, accepted (decision 23)'
 quality_gates:
   lint:
     status: pass

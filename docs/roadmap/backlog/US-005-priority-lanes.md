@@ -9,12 +9,13 @@ status: 'In Progress'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-15'
 github_issue: 5
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-15**: [S9_CLOSE] Close docs: AC1-AC6 met and ticked (AC1 on a quiet machine, decision 23); overview states permission prompts are US-006; AC5 before AC6. Status stays In Progress until the merge.
 > - **2026-11-15**: [S8_CAPTURE] Dev journal, memory bank (US-004 block archived) and README review captured.
 > - **2026-11-15**: [S7_CRITICAL_REVIEW] Fresh DoD check PASS (no clause fails; measured clauses WARN on the author's record); AC1 met on a quiet machine (decision 23).
 > - **2026-11-15**: [S6_TEST_QUALITY_VERIFY] Gates pass on 9620c66 (112 tests, ruff, validator 16/16); hands-on through avatar-play confirmed by Lucas: question over a reply 2.0 s (was 15 s), seamless resume, natural pieces.
@@ -43,14 +44,16 @@ A question or a permission request must not wait behind a status line. A status 
 
 Within one session this already holds: a newer `/speak` from the same session stops that session's speech at once. This story is about speech from **other sessions**, which today plays first come, first served.
 
+Out of scope: speaking permission prompts. That is US-006, which will use the `urgent` lane added here; this story ranks questions (`AskUserQuestion`).
+
 ## Acceptance Criteria
 
-- [ ] **AC1**: With another session's status line playing, an AskUserQuestion prompt cuts it at once. With another session's Stop summary playing, the prompt starts at that summary's next chunk boundary, never mid-chunk. Measured on real hardware from the question's `/speak` to its first audio at the player: over a status line, a median under 1.5 s over 5 runs with no run over 2.5 s (decision 19), on a quiet machine (decision 23); over a summary, within the rest of the playing chunk plus 1.5 s.
-- [ ] **AC2**: A status line is never spoken once 5 s have passed since its hook fired before it started: the worker drops it after a slow summary, and the server drops it after waiting in the queue. A status line that has started is not dropped for age.
-- [ ] **AC3**: A Stop summary interrupted by higher-priority speech resumes after it from its first unplayed chunk, reusing the chunks already made, with no chunk repeated or skipped. An interrupted status line is dropped.
-- [ ] **AC4**: Order is replay, then `urgent` (questions), then `normal` (Stop summaries, `/speak`), then `low` (status lines), first come first served within a lane. Any higher lane from another session cuts a playing status line at once. A replay still interrupts at once and goes first. Within a session, a newer question or Stop summary still replaces older speech, but a status line never replaces that session's question or summary (playing or queued): it is dropped.
-- [ ] **AC6**: Cold case: when a question arrives before another session's status line is audible and the output has been quiet for over 3 s, its first audio comes within a median of 3.0 s over 5 runs of the real flow (`/warm`, then `/speak`), and no run is slower than 5.6 s (the worst before the fix). All speech is cut into chunks of about `CHUNK_CHARS` (80) characters: sentences, long ones split at commas and semicolons, short ones packed together (decision 21), so a question waits for at most one short chunk of a status line it cuts.
-- [ ] **AC5**: `/speak` accepts `priority` (`urgent`, `normal`, `low`). A missing or unknown value means `normal`, so older clients behave as before. README, CLAUDE.md and the `server.py` docstring describe the field and the lanes.
+- [x] **AC1**: With another session's status line playing, an AskUserQuestion prompt cuts it at once. With another session's Stop summary playing, the prompt starts at that summary's next chunk boundary, never mid-chunk. Measured on real hardware from the question's `/speak` to its first audio at the player: over a status line, a median under 1.5 s over 5 runs with no run over 2.5 s (decision 19), on a quiet machine (decision 23); over a summary, within the rest of the playing chunk plus 1.5 s.
+- [x] **AC2**: A status line is never spoken once 5 s have passed since its hook fired before it started: the worker drops it after a slow summary, and the server drops it after waiting in the queue. A status line that has started is not dropped for age.
+- [x] **AC3**: A Stop summary interrupted by higher-priority speech resumes after it from its first unplayed chunk, reusing the chunks already made, with no chunk repeated or skipped. An interrupted status line is dropped.
+- [x] **AC4**: Order is replay, then `urgent` (questions), then `normal` (Stop summaries, `/speak`), then `low` (status lines), first come first served within a lane. Any higher lane from another session cuts a playing status line at once. A replay still interrupts at once and goes first. Within a session, a newer question or Stop summary still replaces older speech, but a status line never replaces that session's question or summary (playing or queued): it is dropped.
+- [x] **AC5**: `/speak` accepts `priority` (`urgent`, `normal`, `low`). A missing or unknown value means `normal`, so older clients behave as before. README, CLAUDE.md and the `server.py` docstring describe the field and the lanes.
+- [x] **AC6**: Cold case: when a question arrives before another session's status line is audible and the output has been quiet for over 3 s, its first audio comes within a median of 3.0 s over 5 runs of the real flow (`/warm`, then `/speak`), and no run is slower than 5.6 s (the worst before the fix). All speech is cut into chunks of about `CHUNK_CHARS` (80) characters: sentences, long ones split at commas and semicolons, short ones packed together (decision 21), so a question waits for at most one short chunk of a status line it cuts.
 
 ## Technical Requirements
 
