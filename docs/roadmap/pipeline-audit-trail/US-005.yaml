@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S6_TEST_QUALITY_VERIFY
+current_stage: S7_CRITICAL_REVIEW
 round_3_completed_at: '2026-11-15T07:19:55Z'
 round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
 round_3_measurements:
@@ -200,7 +200,20 @@ stages:
       - 'After fixes: 105 passed with numpy; numpy blocked passed with 8 skipped; ruff clean; workflow YAML parses'
     commit: ''
   S6_TEST_QUALITY_VERIFY:
-    { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+    status: completed
+    completed_at: '2026-11-15T10:53:10Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate gates adapted to this project (no npm/prettier)'
+      - 'Lucas: hands-on listening through avatar-play (decision 13)'
+    evidence:
+      - 'Quality gate status: PASS on 9620c660fded04b9a65d0d210adc8a1980a204b0 (all gates exit 0; see quality_gates and verified_claims)'
+      - 'Hands-on round 1 (2026-11-14, before round 3): status-line pauses natural; status-line cut heard right; a question waited ~15 s over a reply, which led to decisions 21-22 and S3 round 3'
+      - 'Hands-on round 2 (2026-11-15, on 9620c66, instrumented avatar-play wrapper scratchpad lanes/logavatar.py): first run inaudible (the page''s audio, not the pipeline: clips reached the avatar server, output unmuted at 60%); after Lucas brought the avatar window to the front and clicked it, the instrumented re-run played every clip at full length'
+      - 'Round 2 log, scenario 2: Emma''s /speak at 21.59 s cut George''s playing status chunk in the same 10 ms; Emma started at 22.71 s'
+      - 'Round 2 log, scenario 3: Emma''s /speak at 32.52 s; George''s chunk ended 34.51 s; Emma started 34.54 s (2.0 s wait, 0.03 s after the boundary; was ~15 s); then George''s remaining 6 chunks once each, ~30 ms between chunks'
+      - 'Lucas by ear: Emma quick; George resumed seamlessly, nothing repeated or missing; 80-char reply pieces natural; status line pauses and cut fine; avatar mouth moved for both voices'
+      - 'claude plugin validate: exit 1 only on the reserved plugin name (kept by decision, grilling Q4) plus an informational CLI note about the marketplace manifest; .claude-plugin/ unchanged by this story'
+    commit: ''
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
@@ -218,13 +231,53 @@ closure_checks:
   deliverables_resolved: { status: pending, reason: '' }
   dod_verified: { status: pending, reason: '' }
 quality_gates:
-  lint: { status: pending, evidence: '' }
-  unit_tests: { status: pending, evidence: '' }
-  integration_tests: { status: pending, evidence: '' }
-  functional_tests: { status: pending, evidence: '' }
-  docs_quality: { status: pending, evidence: '' }
-  validators: { status: pending, evidence: '' }
-verified_claims: []
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check --no-cache (defaults) on scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py: All checks passed!; --select E4,E7,E9,F,I on scripts/ tests/: All checks passed!; python3 -m py_compile: ok; workflow YAML parses'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 112 tests OK (numpy present); 112 run, 103 passed, 9 skipped with numpy and kokoro_onnx blocked, as the bare 3.10 CI jobs run; 12/12 parallel runs exit 0 (S5)'
+  integration_tests:
+    status: pass
+    evidence: 'Real Kokoro on omarchy, quiet machine (S3 round 3, 401e234; regression re-check on 9620c66 at load 3.4-4.5): status line median 0.74 s / worst 0.80 s (10 runs), re-check 0.59-0.79 s; reply 0.00 s after the chunk; cold case median 1.16 s / worst 1.39 s; stale line 0 chunks'
+  functional_tests:
+    status: pass
+    evidence: 'Hands-on through avatar-play (see S6 evidence): Lucas confirmed the cut, the quick question over a reply (2.0 s), the seamless resume, natural pieces, avatar mouth'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). README.md, CLAUDE.md and memory-bank content reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: 16/16 pass, exit 0; pipeline_validator.py verify S0-S5: pass'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (112 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as the bare CI jobs run it (numpy and kokoro_onnx blocked)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (112 run, 9 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Python linting passes on the changed files'
+    command: 'uvx ruff@0.15.4 check --no-cache scripts/server.py scripts/claude_speak.py tests/test_server.py tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'python3 ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (16/16 pass)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
 pr_readiness:
   { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
 bypasses: []
