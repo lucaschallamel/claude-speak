@@ -111,7 +111,7 @@ at S7 (`e9410f8`). Close documentation and the PR are next (S9, S10).
 - [ ] S9 close docs: fold in the story overview note (permission prompts are US-006's scope) and
       put AC5 before AC6.
 - [ ] S10: re-run the battery, open the PR, check that the CI matrix with numpy on 3.13 goes green.
-- [ ] Release 0.4.0 with the laptop update block, which includes `claude-speak stop` after
+- [ ] Release 0.4.0 with the laptop update block, which ends the running `server.py` (`claude-speak stop` only stops playback) after
       updating.
 
 **Knowledge to preserve**:
