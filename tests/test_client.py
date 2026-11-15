@@ -255,6 +255,64 @@ class PromptHushTest(TempDataTest):
             send.assert_called_once()
 
 
+class LanesTest(TempDataTest):
+    """Priority lanes (US-005): the client picks the lane per hook event."""
+    ENV, run_hook = PromptHushTest.ENV, PromptHushTest.run_hook
+
+    def spawned_priority(self, event):
+        with mock.patch.object(cs, "spawn_worker") as spawn:
+            self.run_hook(event)
+        spawn.assert_called_once()
+        return spawn.call_args.kwargs.get("priority", "normal")
+
+    def test_a_question_is_urgent(self):
+        event = {"hook_event_name": "PreToolUse", "session_id": "s1", "tool_name": "AskUserQuestion",
+                 "tool_input": {"questions": [{"question": "Which one?"}]}}
+        self.assertEqual(self.spawned_priority(event), "urgent")
+
+    def test_a_reply_is_normal(self):
+        transcript = self.data / "t.jsonl"
+        transcript.write_text("")
+        event = {"hook_event_name": "Stop", "session_id": "s1", "transcript_path": str(transcript),
+                 "last_assistant_message": "Done."}
+        self.assertEqual(self.spawned_priority(event), "normal")
+
+    def test_a_status_line_is_low(self):
+        with mock.patch.object(cs, "current_status", return_value=("u1", "Checking the tests.")), \
+                mock.patch.object(cs, "server_health", return_value={"busy": False}), \
+                mock.patch.object(cs, "spawn_worker") as spawn:
+            cs.maybe_interject(self.data, "s1", self.data / "t.jsonl", {}, "proj")
+        self.assertEqual(spawn.call_args.kwargs["priority"], "low")
+
+    def work(self, priority, age):
+        job = {"text": "status", "settings": {}, "session": "s1", "t": time.time() - age,
+               "priority": priority}
+        with mock.patch("sys.stdin", io.StringIO(json.dumps(job))), \
+                mock.patch.object(cs, "server_health", return_value=None), \
+                mock.patch.object(cs, "prepare", return_value="Checking."), \
+                mock.patch.object(cs, "send_to_server") as send:
+            cs.cmd_worker(mock.Mock(data_dir=str(self.data)))
+        return send, job
+
+    def test_a_status_line_summarised_too_slowly_is_dropped(self):
+        send, _ = self.work("low", cs.STALE_LOW + 1)
+        send.assert_not_called()
+        for priority in ("normal", "urgent"):  # replies and questions are never stale
+            send, _ = self.work(priority, cs.STALE_LOW + 1)
+            send.assert_called_once()
+
+    def test_the_worker_sends_the_lane_and_the_hook_time(self):
+        send, job = self.work("low", 1)
+        send.assert_called_once_with(self.data, "Checking.", {}, "s1", "", "low", job["t"])
+
+    def test_the_speak_body_carries_priority_and_at(self):
+        with mock.patch.object(cs, "ensure_server"), mock.patch.object(cs, "request") as request:
+            cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1", "p", "urgent", 7.0)
+        request.assert_called_once_with(self.data, "POST", "/speak", {
+            "text": "hi", "voice": "v", "speed": 1.0, "session": "s1", "label": "p",
+            "priority": "urgent", "at": 7.0})
+
+
 class AgainTest(TempDataTest):
     def run_again(self, health, status=200, session=None):
         args = mock.Mock(data_dir=str(self.data), session=session)

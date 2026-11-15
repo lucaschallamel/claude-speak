@@ -1,6 +1,6 @@
 # Roadmap
 
-**Last Updated**: 2026-11-14
+**Last Updated**: 2026-11-15
 
 The plan and the delivery record for claude-speak (fork): story specs, the board and the COPPER
 pipeline trail. **Audience**: Lucas and the agents working on the fork.
@@ -19,7 +19,7 @@ roadmap/
 ├── KANBAN.md                 # board: TODO, DOING, DONE, CARPARK (one card per story file)
 ├── backlog/                  # one story file per GitHub issue (US-, SP-)
 └── pipeline-audit-trail/     # /cu:pipe records, one per story run
-    ├── US-004.yaml           # stage-by-stage state and evidence (S0-S10)
+    ├── <ID>.yaml             # stage-by-stage state and evidence (S0-S10): US-004, US-005, ...
     ├── trust-boundary-paths.json  # entry points S5 checks (read from main)
     └── artifacts/            # stage deliverables: <ID>-s1-kickoff.md, <ID>-s2-plan.md, ...
 ```

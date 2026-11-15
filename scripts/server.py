@@ -11,8 +11,16 @@ Listens for HTTP on a unix socket in the data dir. Speech from different
 sessions is queued; a new /speak from the same session replaces its older one.
 Exits by itself after a period with nothing to do.
 
+Speech plays in lanes: a replay first, then "urgent" (questions), "normal" (replies),
+"low" (status lines), first come first served within a lane. Speech from another
+session in a higher lane cuts a status line at once and a reply at its next chunk;
+the reply resumes afterwards. A status line not started 5 s after "at" is dropped.
+
   GET  /health   model, player and voices
-  POST /speak    {"text", "voice", "speed", "session", "label"}; returns at once, plays in turn
+  POST /speak    {"text", "voice", "speed", "session", "label", "priority"?, "at"?}; returns
+                 at once, plays in turn; "priority" is urgent, normal (default) or low, "at"
+                 the epoch time of the hook that asked for it; priority is a request, not
+                 checked: anyone who can reach the socket (only the user) may ask for urgent
   POST /warm     play silence to wake the output device before speech is ready
   POST /synth    same body; returns the whole utterance as a WAV
   POST /stop     stop playback and clear the queue; {"session"} stops only that session
@@ -26,6 +34,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import math
 import os
 import queue
 import re
@@ -58,8 +67,10 @@ VOICES_FILE = "voices-v1.0.bin"
 LANGS = {"a": "en-us", "b": "en-gb", "e": "es", "f": "fr-fr", "h": "hi",
          "i": "it", "j": "ja", "p": "pt-br", "z": "cmn"}
 
-# Start speaking after the first chunk instead of waiting for the whole text.
-CHUNK_CHARS = 250
+# Start speaking after the first chunk instead of waiting for the whole text. Small, because
+# speech from another session waits for the chunk being synthesised (it can't be interrupted)
+# and, over a reply, for the chunk playing to end.
+CHUNK_CHARS = 80
 
 # How long the output must be playing before speech starts, so the first words
 # aren't lost while an idle device (Bluetooth especially) wakes up. Time already
@@ -84,6 +95,12 @@ REPLAY_KEEP = 3600.0
 REPLAY_SESSIONS = 32
 # A second /replay this soon after a replay started is a double tap: it is ignored.
 DOUBLE_TAP = 0.5
+
+# Speech lanes: a smaller number plays first. A replay ranks above them all.
+PRIORITIES = {"urgent": 0, "normal": 1, "low": 2}
+NORMAL, LOW, REPLAY_PRIORITY = PRIORITIES["normal"], PRIORITIES["low"], -1
+# A status line (low) not started this long after its hook is no longer worth hearing.
+STALE_LOW = 5.0
 
 # Dictation state file (voxtype's default). Speech stops when it leaves "idle",
 # so Claude never talks over the user.
@@ -126,18 +143,27 @@ def find_player() -> list[str] | None:
     return None
 
 
-def split_chunks(text: str) -> list[str]:
-    sentences = re.split(r"(?<=[.!?;:])\s+|\n+", text.strip())
+def _pack(parts, limit: int) -> list[str]:
+    """Join consecutive parts into chunks of up to limit characters; a longer part stays whole."""
     chunks, current = [], ""
-    for sentence in filter(None, (s.strip() for s in sentences)):
-        if current and len(current) + len(sentence) > CHUNK_CHARS:
+    for part in filter(None, (p.strip() for p in parts)):
+        if current and len(current) + len(part) > limit:
             chunks.append(current)
-            current = sentence
+            current = part
         else:
-            current = f"{current} {sentence}".strip()
+            current = f"{current} {part}".strip()
     if current:
         chunks.append(current)
     return chunks
+
+
+def split_chunks(text: str) -> list[str]:
+    """Chunks of about CHUNK_CHARS: sentences, a long one split at commas and semicolons
+    (not colons, so a "project: " label stays with its words), short ones packed together.
+    A piece with no such break stays whole; _pack ignores the joining space, so a chunk can
+    be one character over."""
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
+    return _pack([c for s in sentences for c in re.split(r"(?<=[,;])\s+", s)], CHUNK_CHARS)
 
 
 def wav_bytes(samples: np.ndarray, rate: int) -> bytes:
@@ -163,6 +189,17 @@ class Job:
     made: list = field(default_factory=list)  # chunks produced so far (no lead-in)
     rate: int = 0
     started: float = 0.0  # when the playback loop picked it up
+    priority: int = NORMAL
+    at: float = 0.0       # when the hook asked for it (epoch); a stale status line is dropped
+    played: int = 0       # chunks fully played; a resumed job starts after them
+    preempt: bool = False  # stop at the next chunk boundary, then resume
+    prefetched: threading.Event | None = None  # set once _prefetch has made (or failed) chunk 1
+    count: int = -1  # chunks in text, split once (chunk_count()); -1: not split yet
+
+    def chunk_count(self) -> int:
+        if self.count < 0:
+            self.count = len(split_chunks(self.text))
+        return self.count
 
 
 @dataclass
@@ -172,13 +209,26 @@ class Clip:
     stored_at: float
 
 
-class Speaker:
-    """Plays utterances one at a time, in order.
+def hook_time(at, now: float) -> float:
+    """The hook time a client sent, or now when it is missing, unreadable or in the future."""
+    try:
+        at = float(at)
+    except (TypeError, ValueError, OverflowError):  # OverflowError: a huge JSON integer
+        return now
+    return at if math.isfinite(at) and at <= now else now
 
-    Sessions take turns: speech from one session waits for another's to finish.
-    A newer utterance from the same session replaces its older one, playing or
-    queued, since that reply is out of date.
+
+class Speaker:
+    """Plays utterances one at a time, by lane (PRIORITIES), in order within a lane.
+
+    Sessions take turns: speech from one session waits for another's in the same or a
+    higher lane. A newer utterance from the same session replaces its older one, playing
+    or queued, since that reply is out of date; a status line never replaces a question
+    or reply, it is dropped instead.
     """
+
+    prefetcher: threading.Thread | None = None  # the one _prefetch worker running, if any
+    prefetch_next: Job | None = None  # the question it makes chunk 1 for next
 
     def __init__(self, kokoro: Kokoro, player: list[str] | None, silence: Path):
         self.kokoro = kokoro
@@ -205,9 +255,12 @@ class Speaker:
     def resolve_voice(self, voice: str) -> str:
         return voice if voice in self.voices else "af_heart"
 
-    def synth(self, text: str, voice: str, speed: float) -> tuple[np.ndarray, int]:
+    def synth(self, text: str, voice: str, speed: float, unless=None) -> tuple[np.ndarray, int] | None:
+        """unless: checked once the lock is held; when true, nothing is synthesised (None)."""
         voice = self.resolve_voice(voice)
         with self.synth_lock:
+            if unless and unless():
+                return None
             return self.kokoro.create(text, voice=voice, speed=speed,
                                       lang=LANGS.get(voice[:1], "en-us"))
 
@@ -275,18 +328,93 @@ class Speaker:
             woke = now - self.awake_since if awake else 0.0
         return max(MIN_LEAD_IN, LEAD_IN - woke)
 
-    def speak(self, text: str, voice: str, speed: float, session: str = "", label: str = "") -> None:
+    def speak(self, text: str, voice: str, speed: float, session: str = "", label: str = "",
+              priority=None, at=None) -> None:
+        # Read before anything changes: a request that fails here cancels nothing.
+        # priority is the client's request; any process that can reach the socket (the user's) may ask.
+        lane = PRIORITIES.get(priority, NORMAL) if isinstance(priority, str) else NORMAL
         with self.state_lock:
             now = time.time()
+            asked_at = hook_time(at, now)
+            if lane == LOW and any(j.session == session and j.priority < LOW and not j.cancelled
+                                   for j in self.queue + [self.current] if j):
+                return  # a status line never replaces this session's question or reply
             others = any(s != session and now - seen < OTHERS_ACTIVE for s, seen in self.last_seen.items())
             if session:
                 self.last_seen[session] = now
             if label and others:
                 text = f"{re.sub(r'[-_.]+', ' ', label)}: {text}"
             self._cancel_session(session)
-            self.queue.append(Job(session, text, voice, speed))
+            job = Job(session, text, voice, speed, priority=lane, at=asked_at)
+            self._enqueue(job)
+            self._preempt_for(job)
             self.busy_until = now + 3600
             self.wake.notify()
+
+    def _enqueue(self, job: Job, front: bool = False) -> None:
+        """Queue at the end of the job's lane, or its start with front; call with state_lock held."""
+        at = next((i for i, j in enumerate(self.queue)
+                   if j.priority > job.priority or (front and j.priority == job.priority)),
+                  len(self.queue))
+        self.queue.insert(at, job)
+
+    def _preempt_for(self, job: Job) -> None:
+        """Make way for another session's speech in a higher lane; call with state_lock held.
+
+        A status line is cut at once and dropped; a reply stops at its next chunk boundary
+        and resumes after (_run). Questions and replays are never preempted.
+        """
+        cur = self.current
+        if not cur or cur.cancelled or cur.session == job.session or cur.priority <= job.priority:
+            return
+        if cur.priority == LOW:
+            self._cancel_current()
+        else:
+            cur.preempt = True
+            if self.queue and self.queue[0] is job and job.prefetched is None:
+                job.prefetched = threading.Event()
+                if self.prefetcher:  # one worker at a time: it takes the newest question next
+                    if self.prefetch_next:
+                        self.prefetch_next.prefetched.set()  # replaced before its turn
+                    self.prefetch_next = job
+                    return
+                try:
+                    self.prefetcher = threading.Thread(target=self._prefetch, args=(job,), daemon=True)
+                    self.prefetcher.start()
+                except RuntimeError as exc:  # can't start a thread: the job makes chunk 1 itself
+                    log(f"prefetch not started: {exc}")
+                    self.prefetcher = None
+                    job.prefetched.set()
+
+    def _prefetch(self, job: Job | None) -> None:
+        """Make a job's first chunk while the reply it preempts finishes its chunk, so it
+        starts right at the boundary instead of after its own synthesis. Then the next job
+        handed over by _preempt_for, until there is none."""
+        while job:
+            try:
+                chunks = split_chunks(job.text)
+                if chunks and not job.cancelled:
+                    # A question replaced while this waited for the lock is not synthesised.
+                    made = self.synth(chunks[0], job.voice, job.speed, unless=lambda: job.cancelled)
+                    with self.state_lock:
+                        if made and not job.cancelled and job.clip is None:
+                            job.clip = Clip([made[0]], made[1], time.time())
+            except Exception as exc:  # the job then synthesises chunk 1 itself
+                log(f"prefetch failed: {exc}")
+            finally:
+                job.prefetched.set()
+            with self.state_lock:
+                job, self.prefetch_next = self.prefetch_next, None
+                if job is None:
+                    self.prefetcher = None
+
+    @staticmethod
+    def _resumed(job: Job) -> Job:
+        """The rest of a preempted job: chunks made but not yet played are reused."""
+        rest = Job(job.session, job.text, job.voice, job.speed, priority=job.priority, at=job.at,
+                   clip=Clip(list(job.made), job.rate, time.time()), played=job.played)
+        rest.made = rest.clip.chunks[:job.played]  # whole once the rest is made, for /replay
+        return rest
 
     def replay(self, session: str = "") -> bool:
         """Play the last thing said again, ahead of the queue. False when there is nothing.
@@ -310,13 +438,13 @@ class Speaker:
                 done = max(cur.clip.chunks if cur.clip else [], list(cur.made), key=len)
                 rate = cur.rate or (cur.clip.rate if cur.clip else 0)
                 job = Job(cur.session, cur.text, cur.voice, cur.speed,
-                          clip=Clip(done, rate, now), replay=True)
+                          clip=Clip(done, rate, now), replay=True, priority=REPLAY_PRIORITY)
             else:
                 key = session or self.last_clip
                 clip = self.clips.get(key)
                 if not clip or now - clip.stored_at >= REPLAY_KEEP:
                     return False
-                job = Job(key, "", "", 1.0, clip=clip, replay=True)
+                job = Job(key, "", "", 1.0, clip=clip, replay=True, priority=REPLAY_PRIORITY)
             self._cancel_current()
             self.queue.insert(0, job)
             self.busy_until = now + 3600
@@ -329,7 +457,7 @@ class Speaker:
         Speech stopped before all its chunks were made is not kept. A replay is kept like any
         other speech: it is the same audio, now the last thing said.
         """
-        whole = len(split_chunks(job.text)) or (len(job.clip.chunks) if job.clip else 0)
+        whole = job.chunk_count() or (len(job.clip.chunks) if job.clip else 0)
         if not chunks or len(chunks) < whole:
             return
         with self.state_lock:
@@ -341,21 +469,36 @@ class Speaker:
                 del self.clips[min(self.clips, key=lambda s: self.clips[s].stored_at)]
 
     def _audio(self, job: Job):
-        """Yield (samples, rate) per chunk: chunks already made (a replay), then synthesis of the rest."""
+        """Yield (samples, rate) per chunk after the ones played (a resume): chunks already
+        made (a replay or resume), then synthesis of the rest."""
+        if job.prefetched:
+            job.prefetched.wait()  # its first chunk is being made; don't synthesise it twice
         done = job.clip.chunks if job.clip else []
-        for samples in done:
+        for samples in done[job.played:]:
             yield samples, job.clip.rate
-        for chunk in split_chunks(job.text)[len(done):]:
-            if job.cancelled:
+        for chunk in split_chunks(job.text)[max(len(done), job.played):]:
+            if job.cancelled or job.preempt:  # preempt: free the synth lock for the speech waiting
                 return
             yield self.synth(chunk, job.voice, job.speed)
+
+    def _next(self) -> Job:
+        """Wait for the next job, dropping stale status lines; call with state_lock held."""
+        while True:
+            while not self.queue:
+                self.wake.wait()
+            job = self.queue.pop(0)
+            if job.priority == LOW and time.time() - job.at > STALE_LOW:
+                log(f"dropped a stale status line {job.session[:8] or '-'}")
+                if not self.queue:
+                    self.busy_until = time.time()  # else /health stays busy and blocks interjections
+                continue
+            return job
 
     def _loop(self) -> None:
         while True:
             with self.state_lock:
-                while not self.queue:
-                    self.wake.wait()
-                job = self.current = self.queue.pop(0)
+                job = self._next()
+                self.current = job
                 job.started = time.time()
             try:
                 self._run(job)
@@ -401,22 +544,32 @@ class Speaker:
             try:
                 path = clips.get(timeout=0.05)
             except queue.Empty:
-                if job.cancelled:
+                if job.cancelled or job.preempt:
                     break
                 continue
             if path is None:
+                # The producer stops early when preempted (_audio); chunks left unplayed resume.
+                if job.preempt and job.played < job.chunk_count():
+                    clips.put(None)  # put the end back: drain() below waits for it
+                    break
                 return
             try:
                 with self.state_lock:
-                    if job.cancelled:
+                    if job.cancelled or job.preempt:  # preempt: here, between two chunks
                         break
                     self._end_warm()
                     proc = self.proc = self._spawn(path)
                 self._reap(proc)
+                job.played += 1
             finally:
                 os.unlink(path)
-        # Cancelled: don't wait for the chunk being synthesised, so the next job (a replay,
-        # a newer reply) starts now; the producer's leftovers are deleted in the background.
+        with self.state_lock:
+            if job.preempt and not job.cancelled:
+                self._enqueue(self._resumed(job), front=True)
+            job.cancelled = True  # the producer stops; a resume synthesises what is missing
+        # Cancelled or preempted: don't wait for the chunk being synthesised, so the next job
+        # (a replay, a newer reply, a question) starts now; the producer's leftovers are
+        # deleted in the background.
         threading.Thread(target=drain, daemon=True).start()
 
 
@@ -471,7 +624,8 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/speak" and text:
                 session = str(body.get("session") or "")
                 log(f"speak [{voice} x{speed}] {session[:8] or '-'}: {text[:100]!r}{'...' if len(text) > 100 else ''}")
-                speaker.speak(text, voice, speed, session, str(body.get("label") or ""))
+                speaker.speak(text, voice, speed, session, str(body.get("label") or ""),
+                              body.get("priority"), body.get("at"))
                 self._json(202, {"ok": True})
             elif self.path == "/synth" and text:
                 samples, rate = speaker.synth(text, voice, speed)

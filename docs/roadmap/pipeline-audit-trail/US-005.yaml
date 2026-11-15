@@ -1,0 +1,334 @@
+schema_version: 2
+story_id: US-005
+story_path: docs/roadmap/backlog/US-005-priority-lanes.md
+github_issue: 'lucaschallamel/claude-speak#5'
+feature_branch: feature/US-005-priority-lanes
+worktree: ~/orca/workspaces/claude-speak/us-005-priority-lanes
+review_profile: standard
+change_surface:
+  code: true
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S10_MERGE
+round_3_completed_at: '2026-11-15T07:19:55Z'
+round_3: 'S6 hands-on (2026-11-14T17:04Z, avatar-play): pauses natural; status-line cut heard right; a question waited ~15 s over a reply. Lucas chose one chunking rule at ~80 chars for all speech (decision 21), then S3 round 3, fresh S4, a delta S5, and S6 again. Round 3 also adds: the preempted reply stops synthesising ahead; the question''s first chunk is prefetched (decision 22); a race fix (the consumer resumes when the producer stopped early with nothing queued). S6 automated gates passed on 7ffdb5c before round 3 (105 tests both modes, ruff, story validator 16/16; claude plugin validate fails only on the accepted reserved-name error) and are re-run at S6.'
+round_3_measurements:
+  - 'Procedure as before (worktree server, real Kokoro, bm_george/bf_emma x1.1, logging pw-play wrapper, omarchy); load recorded per set'
+  - '80-char chunks, before stop-ahead and prefetch (load 8.2 rising to 13.9, kswapd0 at 100%, 14 GiB swap, ld jobs from another process): status line 9.64, 4.49, 0.69, 0.85, 2.64 s; reply 3.04 s after the chunk ended'
+  - 'With stop-ahead only (load 9.6 to 13.9, cmake from another process): status line 0.84, 3.43, 0.79, 0.86, 1.24 s; reply 1.97 s after the chunk ended'
+  - 'With stop-ahead and prefetch (load 6.6 to 9.3): status line 0.59, 2.69, 0.75, 0.79, 0.81 s (median 0.79, worst 2.69 vs bar 2.5); reply 0.01 s after the chunk ended, 2.87 s after its /speak; stale 0 chunks'
+  - 'AC6 with prefetch (load 9.7): 1.90, 1.41, 1.47, 3.03, 2.01 s: median 1.90 s (bar 3.0), worst 3.03 s (bar 5.6)'
+  - 'Status line again (load 12.9 rising to 17.8: other Claude sessions, orca-ide and python processes at ~100% each): 1.69, 0.86, 5.44, 3.55, 2.37 s; measuring stopped as not representative'
+  - 'Quiet machine, 2026-11-15 (Lucas paused the other sessions; load 2.2 at start, 5.4 at end, mostly Kokoro; 13 GiB swap still allocated), commit 401e234:'
+  - 'AC1 status line, 10 runs: 0.80, 0.77, 0.72, 0.76, 0.54, 0.58, 0.61, 0.77, 0.78, 0.68 s: median 0.74 s (bar 1.5), worst 0.80 s (bar 2.5): PASS; 2 player starts per run (A cut, then B)'
+  - 'AC1 reply: question first audio 0.00 s after A''s chunk ended (2.95 s after its /speak), then the rest of A once each: PASS'
+  - 'AC6 cold, 5 runs: 1.16, 1.34, 1.11, 1.02, 1.39 s: median 1.16 s (bar 3.0), worst 1.39 s (bar 5.6): PASS'
+  - 'AC2 stale: 0 chunks played: PASS'
+status: active
+status_reason: ''
+initiated_at: '2026-11-14T13:51:42Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-14T13:51:42Z'
+    evidence:
+      - 'Orca worktree us-005-priority-lanes created from main be27e10 (no issue link: Orca links upstream issues by mistake)'
+      - 'Branch feature/US-005-priority-lanes created; session moved in with EnterWorktree'
+      - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
+      - 'pipeline_validator audit at init: passed, exit 0'
+    commit: 'b6a0539 (S0 changes committed with S1)'
+  S1_KICKOFF:
+    status: completed
+    completed_at: '2026-11-14T13:58:28Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: four decisions via AskUserQuestion (all recommended options)'
+    evidence:
+      - 'Issue #5 re-read 2026-11-14: no comments before kickoff'
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-005-s1-kickoff.md'
+      - 'Challenge log: 7 entries (standard minimum 3); 6 resolved, 1 open (question latency, measured in S3/S6)'
+      - 'Story file updated: scope to cross-session, ACs 2 -> 5, technical requirements, decisions section'
+      - 'Decisions posted on issue #5 (comment 6878349126)'
+      - 'Branch pushed to origin after the checkpoint commit'
+    commit: 'b6a0539'
+  S2_PLAN:
+    status: completed
+    completed_at: '2026-11-14T14:00:51Z'
+    reviewers:
+      - 'Author (Claude Code), inline per cu-pipe S2'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-005-s2-plan.md'
+      - 'Alternatives: 5 considered and rejected (heapq/lanes, client-side stop, re-synthesis resume, cut-all, pre-synthesis)'
+      - 'What could go wrong: 8 risks (W1-W8) each with a check; test plan maps every AC'
+      - 'Grilling with Lucas after the plan: 7 decisions (5-11), all recommended options; decision 5 changed step 1; story, plan and issue #5 updated'
+    commit: '1be3c78'
+  S3_EXECUTE:
+    status: completed
+    round_2_completed_at: '2026-11-14T16:46:15Z'
+    round_2_evidence:
+      - 'Code: split_chunks(per_sentence) with a shared _pack helper; CLAUSE_CHARS = 80; Job.per_sentence set for the low lane and kept by _resumed and the replay restart; _remember and _audio split by the job''s mode'
+      - 'Why per_sentence is a Job field, not the lane: a replay has priority -1, so a lane-derived split would re-chunk a replayed status line and skip a sentence'
+      - 'Tests: 4 new (per-sentence split, comma split with nothing lost, low vs normal synthesis chunks, replay/resume keep sentence chunks); 103 passed with numpy; 95 passed, 8 skipped with numpy blocked; ruff clean'
+      - 'Mutation check: replay without per_sentence, and low lane without per_sentence: each failed its test; server.py restored from a scratchpad backup (cmp identical)'
+      - 'Measurement procedure: as round 1 (worktree server, real Kokoro, bm_george x1.1, logging pw-play wrapper, omarchy); cold case via scratchpad lanes/cold.py: output quiet 5 s, A posts /warm then /speak low, 0.5 s later B posts /warm then /speak urgent; latency = player start minus B /speak send'
+      - 'AC6, one sentence per chunk (first attempt): 4.18, 1.02, 1.81, 3.31, 3.01 s: median 3.01 s (bar 3.0: FAIL by 0.01 s), worst 4.18 s (bar 5.6), load average 13'
+      - 'Decision 18 (Lucas): also split long sentences at commas'
+      - 'AC6, comma pieces: 1.38, 1.47, 0.89, 1.58, 0.82 s: median 1.38 s (bar 3.0: PASS), worst 1.58 s (bar 5.6: PASS), load average 10-11'
+      - 'AC1 over a playing status line after the change, 8 runs: 1.19, 0.96, 1.93, 0.84, 0.96, 1.58, 0.99, 1.27 s; last 5-run set median 0.99 s, worst 1.58 s; first set had 1.93 s'
+      - 'Decision 19 (Lucas): AC1 bar over a status line becomes median of 5 under 1.5 s, no run over 2.5 s: PASS (median 0.99-1.19 s, worst 1.93 s)'
+      - 'AC1 over a reply: 0.83 s after the chunk ended, resume A2 then A3 once (PASS); AC2 stale: 0 chunks (PASS)'
+      - 'Docs: CLAUDE.md (status-line splitting), memory-bank/systemPatterns.md (split_chunks divergence); story ACs 1 and 6 and decisions 18-19; issue #5 comment 6880916981'
+    reopened_at: '2026-11-14T16:34:14Z'
+    reopened_reason: 'Second grilling after S4 (decisions 12-17): fix the cold case in this story (AC6, sentence chunks for status lines); decision 16 sends it through S3 and a fresh S4 again. Round 1 below completed 2026-11-14T14:18:39Z at c5b4be7.'
+    completed_at: '2026-11-14T14:18:39Z'
+    reviewers:
+      - 'Author (Claude Code): AC self-review below'
+    evidence:
+      - 'Code: scripts/server.py (PRIORITIES, STALE_LOW, hook_time, Job fields, speak/_enqueue/_preempt_for/_resumed, _next, _audio, _run break path); scripts/claude_speak.py (STALE_LOW, priority on spawn_worker/send_to_server, urgent for AskUserQuestion, low for interjections, worker stale drop)'
+      - 'Tests: 21 new (LanesTest x14 server incl. /speak endpoint, LanesTest x6 client, plus endpoint helper generalised); python3 -m unittest discover tests: 99 passed, 0 failed, 0 skipped (numpy installed); 91 passed, 8 skipped with numpy and kokoro_onnx blocked (as CI); 12/12 parallel runs exit 0'
+      - 'Lint: uvx ruff@0.15.4 check --select E4,E7,E9,F,I on changed Python files: all checks passed'
+      - 'Real hardware (procedure: worktree server via ensure_server, real Kokoro kokoro-v1.0.onnx, voice bm_george x1.1, player = logging wrapper around pw-play on omarchy, own CLAUDE_SPEAK_DATA; script scratchpad lanes/measure.py; latency = player start time minus /speak send time, same clock)'
+      - 'AC1 over a playing status line: 0.77 s, 1.02 s, 0.72 s (3 runs, bar 1.5 s); 2 chunks started per run (A cut, then B)'
+      - 'AC1/AC3 over a playing 3-chunk reply: question 0.77 s after A chunk 1 ended (bar 1.5 s), then A2 and A3 once each (4 chunks total, no repeat)'
+      - 'AC2: status line with at = now - 6 s: 0 chunks played; server log "dropped a stale status line"'
+      - 'Observation (outside AC1 wording): when the question arrives before the status line is audible and the output is asleep, it waited 3.19 s (full 2 s LEAD_IN wake plus the status line synthesis holding synth_lock)'
+      - 'AC self-review: AC1 met (tests + measurement); AC2 met (worker + server tests, real run); AC3 met (resume tests, real run); AC4 met (order, replay first, same-session drop, normal cuts low); AC5 met (validation tests, endpoint test, README/CLAUDE.md/docstring)'
+      - 'Deviation log: stale drop moved into a _next helper; added busy_until reset when the dropped status line was the last job (else /health stays busy and blocks interjections; found while coding, not in the plan); hook_time is a module function for testing'
+      - 'Docs: README fork additions (Priority lanes), CLAUDE.md server paragraph, server.py docstring, memory-bank/systemPatterns.md fork divergences'
+      - 'S1 open challenge 7 (latency under synth_lock) resolved by measurement'
+      - 'Branch pushed to origin after the checkpoint commit'
+    commit: 'c5b4be7'
+  S4_CODE_REVIEW:
+    status: completed
+    status_note: 'Three rounds. Round 1 completed 2026-11-14T16:20:46Z on c5b4be7, fixes in 67f4419. Round 2 reviewed the AC6 change (decision 16) on 30a7662. Round 3 reviewed the single chunk rule, stop-ahead and prefetch on f5e846a.'
+    completed_at: '2026-11-15T07:30:27Z'
+    reviewed_commit: 'f5e846a327605d4c9f0d279b70df6d61be5c03c7'
+    reviewed_commit_round_2: '30a7662ac16294365caf7cd9f0e470442627f763'
+    reviewed_commit_round_1: 'c5b4be7427fc6521636505854afde3acaba7c242'
+    round_3_reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff 7ffdb5c f5e846a (scripts, tests, README, CLAUDE.md, systemPatterns), git diff main...f5e846a for context, CLAUDE.md; ran the suite, a 20,000-case split_chunks fuzz and a thread dump; Verdict dictated: no'
+      - 'Author pass: /ponytail:ponytail-review of 7ffdb5c..HEAD before the fresh report returned; it said "Looks good. Ship." and missed fresh finding 1 (recorded as such)'
+    round_3_evidence:
+      - 'Delegated to /cu:quality-review as a fresh-context review: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 4 low, 3 info (all fresh; author found none)'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'R3-F1 Low fixed: the resume branch on path None puts the end marker back before breaking, so drain() ends; test asserts no drain thread is left (thread names include the target); the test also makes the None path deterministic (producer stopped and marker queued before chunk 1 ends)'
+      - 'R3-F2 Low accepted with reason: clearing preempt after the producer has stopped ahead would make the consumer treat the end marker as finished and drop the rest of the reply; avoiding that needs a second flag or a producer restart, and the producer has almost always stopped ahead by the time a question can be cancelled, so the pause would remain; same pause as round-2 F6 (accepted), now longer by one chunk synthesis'
+      - 'R3-F3 Low fixed: synth(unless=) checks after taking synth_lock; _prefetch passes unless=lambda: job.cancelled, so a question replaced while waiting is not synthesised; test on synth with a fake Kokoro'
+      - 'R3-F4 Low fixed: AC6 reworded to the single CHUNK_CHARS rule; decision 14 marked superseded by 21'
+      - 'R3-F5 Info fixed: early-prefetch test asserts synth call_count == 1 while the question is blocked'
+      - 'R3-F6 Info fixed: prefetch test now speaks two urgent jobs (only the first is prefetched) with a label (the prefetched chunk starts with it)'
+      - 'R3-F7 Info deferred to S6 hands-on by design: more chunks per reply (spawns, intonation at comma cuts)'
+      - 'Mutation checks (scratchpad mutate.py; restored from a backup, cmp identical): end-marker put removed, unless check removed, queue[0] guard removed: each failed its test'
+      - 'After fixes: 109 passed with numpy; numpy blocked passed with 9 skipped; 12/12 parallel runs exit 0; ruff clean'
+      - 'No re-measurement: the fixes touch only an end marker, a cancelled-job check and tests, none on the timed paths of the quiet-machine run on 401e234 (S3 round 3)'
+    round_2_reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff 67f4419 30a7662 (scripts, tests, CLAUDE.md, systemPatterns), CLAUDE.md; ran the suite and a scratch experiment (old vs new split_chunks on 20,000 random inputs; per_sentence edge and loss checks); Verdict dictated: no'
+      - 'Author pass after the fresh report (1 Info finding added)'
+    round_2_evidence:
+      - 'Delegated to /cu:quality-review as a fresh-context review: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 2 low, 3 info (4 fresh, 1 author)'
+      - 'Fresh verified: default chunking identical to main on 20,000 random inputs; per_sentence loses or reorders nothing; per_sentence cannot be lost on any Job path; no piece repeated or skipped'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'R2-F1 Low mitigated by wording: pieces are "about 80" (at most 81: _pack ignores the joining space, as for replies since before the fork); AC6, decision 18, docstring, CLAUDE.md reworded; _pack itself unchanged so reply chunking stays byte-for-byte'
+      - 'R2-F2 Low fixed: negative assertion, a status line stored after 1 of 3 pieces is not kept'
+      - 'R2-F3 Info fixed: per_sentence also splits long sentences at semicolons (not colons, so a project-name label is never a piece alone); new test'
+      - 'R2-F4 Info no change: a long sentence with no comma or semicolon stays whole (documented, tested)'
+      - 'R2-F5 Info (author) deferred to S6 by design: player launch gaps between pieces may sound choppy; judged by ear at the hands-on (decision 13); if choppy, raise CLAUSE_CHARS and re-measure'
+      - 'Mutation checks: _remember without per_sentence, and the split without semicolons: each failed its test; server.py restored from a scratchpad backup (cmp identical)'
+      - 'Measured status line still splits [22, 47, 74, 27] (no semicolons), so the AC1 and AC6 measurements stand'
+      - 'After fixes: 104 passed with numpy; numpy blocked passed with 8 skipped; ruff clean; issue #5 comment 6881019362'
+    round_1_completed_at: '2026-11-14T16:20:46Z'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-005, git diff main...c5b4be7, CLAUDE.md; ran the test suite and one scratch experiment (fake player); Verdict dictated: no'
+      - 'Author pass after the fresh report (1 Info finding added)'
+    evidence:
+      - 'Delegated to /cu:quality-review as a fresh-context review: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 3 low, 3 info (5 fresh, 1 author)'
+      - 'User disposition: [C] fix before S5 ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'F1 Low fixed: .github/workflows/tests.yml installs numpy>=2,<3 on the Python 3.13 jobs, so CI runs the 8 numpy-only playback tests (3 resume, 5 US-004 replay) on Linux and macOS; 3.10 jobs stay bare to keep covering the stub path; job names unchanged. CI result verified at S10 on the PR'
+      - 'F2 Low fixed: stale test now asserts old normal and urgent jobs are kept, with an end sentinel so a regression fails instead of blocking'
+      - 'F3 Low fixed: client worker stale test asserts urgent is sent'
+      - 'Mutation check: both regressions injected (lane check removed in _next; worker guard priority != "normal"): 2 tests FAILED in 0.003 s; sources restored with git checkout'
+      - 'Found while mitigating: the first version of the F2 test hung forever under the injected regression (third _next on an empty queue); restructured with a sentinel before commit'
+      - 'F4 Info accepted: an in-flight chunk is re-synthesised on resume; synthesis cannot be interrupted, so keeping it would only shorten the resume, at the cost of a cross-job handoff race; same as US-004 restart'
+      - 'F5 Info fixed: README now says "hasn''t started within 5 seconds"'
+      - 'F6 Info (author) accepted: a reply preempted by a question that is then cancelled pauses at the boundary and resumes at once; undoing it would need preempt provenance on every cancel path'
+      - 'After fixes: python3 -m unittest discover tests 99 passed; numpy blocked 91 passed, 8 skipped; ruff clean'
+      - 'Fixes committed and pushed'
+    commit: '67f4419'
+  S5_ARCH_SEC_COMP_REVIEW:
+    status: completed
+    completed_at: '2026-11-15T07:39:08Z'
+    reviewed_commit: '4620ddad6f77c9e5bf9a98591f7b38fe9808e11f'
+    reviewed_commit_round_1: '70fd3f3f856ce01cf9568212b0963c1317f044a5'
+    delta_reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story US-005, git diff 7ffdb5c 4620dda, git diff main...4620dda (scripts, .github) for context, CLAUDE.md, trust-boundary-paths.json read from main; ran the suite and a stub-Kokoro experiment (200 urgent /speak from one session during a preempt window: 200 prefetch threads); Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed delta finding 1 in the code (Event set before Thread.start, unbounded wait in _audio); no new findings'
+    delta_evidence:
+      - 'Delegated to /cu:arch-review as a fresh-context review of the delta since the round-1 S5 (7ffdb5c..4620dda): PASS'
+      - 'trust boundary touched, not security-sensitive: the delta changes scripts/server.py (on the list read from main) but adds no endpoint, request field, file or network access; the socket stays user-only; the changes are internal scheduling (chunk size, prefetch worker, stop-ahead, synth unless); every exhaustion path found was already reachable through /synth before the delta; the fresh reviewer agreed independently'
+      - 'Findings: 0 critical, 0 high, 0 medium, 3 low, 4 info (all fresh)'
+      - 'Risk register (fresh): R1 playback stuck on an unset prefetch Event L/M (fixed); R2 urgent flood churns prefetch threads L/L (mitigated: one worker); R3 smaller chunks add audible gaps M/L (S6 hands-on); R4 upstream merge conflicts M/L (systemPatterns divergences, decision 17); R5 quadratic re-split of huge texts L/L (fixed)'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'D-F1 Low fixed: the prefetch thread starts inside try; on RuntimeError the Event is set and the job makes chunk 1 itself; test patches Thread.start to raise'
+      - 'D-F2 Low mitigated (recommended accept, user asked to mitigate all): one prefetch worker at a time; a question arriving while it runs is handed over (prefetch_next), a question replaced before its turn has its Event set; test: three questions from one session start one thread and only the newest gets a clip'
+      - 'D-F3 Low fixed: Job.chunk_count() splits the text once; used by _remember and the resume branch; test counts split_chunks calls'
+      - 'D-F4 Info: more chunks per reply, checked by ear at the S6 hands-on; D-F5..F7 Info: lifecycle, lock ordering and compliance verified, no action'
+      - 'Mutation checks (scratchpad mutate.py; restored from a backup, cmp identical): start failure unhandled, a thread per question, chunk count not cached: each failed its test'
+      - 'After fixes: 112 passed with numpy; numpy blocked passed with 9 skipped; 12/12 parallel runs exit 0; ruff clean'
+      - 'Regression timing (load 3.4 to 4.5): status line 0.59, 0.64, 0.74, 0.79, 0.79 s; reply 0.00 s after the chunk; stale 0 chunks'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story US-005, git diff main...70fd3f3, CLAUDE.md, memory-bank/systemPatterns.md and techContext.md, trust-boundary-paths.json read from main; ran the suite and a float overflow experiment; Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed finding 1 (float(10**400) raises OverflowError; the handler catches Exception and returns 500 after _cancel_session ran); no new findings'
+    evidence:
+      - 'Delegated to /cu:arch-review as a fresh-context review: PASS'
+      - 'trust boundary touched, not security-sensitive: the diff changes scripts/server.py and scripts/claude_speak.py (on the list read from main) but adds no endpoint, authority or egress; the two new /speak fields (priority, at) are allow-listed or clamped, reach only same-user processes over the 0600 socket, and at worst reorder or drop that user''s own speech, which /stop already allows; the fresh reviewer agreed independently (decision 12)'
+      - 'Findings: 0 critical, 0 high, 0 medium, 2 low, 4 info (all fresh)'
+      - 'Risk register (fresh): R1 malformed at cancels speech L/L (fixed); R2 urgent bursts starve replies L/L (accepted: same-user socket, questions rare); R3 wasted synthesis on preempt M/L (accepted: cost only, tests cover no repeat/skip); R4 memory bank vs CI drift M/L (fixed); R5 stale server after upgrade M/L (release note); R6 upstream divergence M/M (small helpers, decision 17)'
+      - 'User disposition: [C] fix ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'S5-F1 Low fixed: hook_time catches OverflowError; speak computes the hook time before anything changes; tests: hook_time with 10**400, and speak with at=10**400 queues the job at now; mutation (catch removed) made both tests error'
+      - 'S5-F2 Low fixed: memory-bank/techContext.md says the numpy tests run on the 3.13 CI jobs'
+      - 'S5-F3 Info fixed: server.py docstring and a comment in speak say priority is a request, not checked'
+      - 'S5-F4 Info no change: unbounded sessions predate US-005 (upstream speak and last_seen), reachable only by the user''s own processes, and US-005 keeps one job per session; a cap would drop real speech or add upstream divergence for no realistic case'
+      - 'S5-F5 Info partly fixed: workflow gets permissions: contents: read; numpy keeps the >=2,<3 range, the same as server.py''s inline deps (an exact pin would drift from it)'
+      - 'S5-F6 Info recorded: story "Release notes (for 0.4.0)": run claude-speak stop after updating; goes into the laptop update block'
+      - 'After fixes: 105 passed with numpy; numpy blocked passed with 8 skipped; ruff clean; workflow YAML parses'
+    commit: '7ffdb5c (round 1 fixes); 9620c66 (delta fixes)'
+  S6_TEST_QUALITY_VERIFY:
+    status: completed
+    completed_at: '2026-11-15T10:53:10Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate gates adapted to this project (no npm/prettier)'
+      - 'Lucas: hands-on listening through avatar-play (decision 13)'
+    evidence:
+      - 'Quality gate status: PASS on 9620c660fded04b9a65d0d210adc8a1980a204b0 (all gates exit 0; see quality_gates and verified_claims)'
+      - 'Hands-on round 1 (2026-11-14, before round 3): status-line pauses natural; status-line cut heard right; a question waited ~15 s over a reply, which led to decisions 21-22 and S3 round 3'
+      - 'Hands-on round 2 (2026-11-15, on 9620c66, instrumented avatar-play wrapper scratchpad lanes/logavatar.py): first run inaudible (the page''s audio, not the pipeline: clips reached the avatar server, output unmuted at 60%); after Lucas brought the avatar window to the front and clicked it, the instrumented re-run played every clip at full length'
+      - 'Round 2 log, scenario 2: Emma''s /speak at 21.59 s cut George''s playing status chunk in the same 10 ms; Emma started at 22.71 s'
+      - 'Round 2 log, scenario 3: Emma''s /speak at 32.52 s; George''s chunk ended 34.51 s; Emma started 34.54 s (2.0 s wait, 0.03 s after the boundary; was ~15 s); then George''s remaining 6 chunks once each, ~30 ms between chunks'
+      - 'Lucas by ear: Emma quick; George resumed seamlessly, nothing repeated or missing; 80-char reply pieces natural; status line pauses and cut fine; avatar mouth moved for both voices'
+      - 'claude plugin validate: exit 1 only on the reserved plugin name (kept by decision, grilling Q4) plus an informational CLI note about the marketplace manifest; .claude-plugin/ unchanged by this story'
+    commit: 'e9410f8'
+  S7_CRITICAL_REVIEW:
+    status: completed
+    completed_at: '2026-11-15T11:03:12Z'
+    reviewed_commit: 'e9410f80a8f6d8e7bda30451e206c7b8c0f69c77'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/dod-verify.md, fresh-context-review.md, story US-005, git diff main...e9410f8, pipeline_validator status output (scratchpad us005-status.json), CLAUDE.md; also the measurement lines of US-005.yaml at the author''s request, which dod-verify.md forbids: the reviewer flagged the conflict and marked measured clauses WARN rather than PASS; ran the suite (112 OK; numpy blocked 9 skipped); Verdict dictated: no'
+      - 'Author pass after the fresh report: WARN reasons confirmed; added that 9620c66 had no dedicated fresh review but was read by this S7 reviewer and will be listed as changed after review at S10'
+    evidence:
+      - 'Delegated to /cu:dod-verify as a fresh-context review: PASS (no clause FAIL)'
+      - '21 clauses: 16 PASS with code and test cited at path:line; 4 WARN (AC1c, AC1d, AC6a, TR4: measured clauses resting on the author''s record); general DoD: 6 WARN, 1 SKIP (no CHANGELOG), rest PASS'
+      - 'Challenge log (standard: 2 perspectives x 2 entries): User 1 multi-session load is when lanes matter and the loaded tail exceeds 2.5 s (decision 23); User 2 "two sessions" were two session ids from one script, same server path as two Claude sessions, real path covered by the avatar-play hands-on; Maintainer 1 every code change had a fresh review except 9620c66 (read by S7, listed at S10); Maintainer 2 upstream divergence grew, documented in systemPatterns, decision 17'
+      - 'Decision 23 (Lucas, via AskUserQuestion: "Accept: bar holds on a quiet machine"): AC1 reworded to "on a quiet machine"; loaded tail recorded as a known limit'
+      - 'User disposition: [A] accept and advance ("continue ro s8")'
+      - 'Item 2 (re-measure cold and reply on the final commit) not run, accepted: the AC6 set is on 401e234; 4620dda and 9620c66 change only the end-marker put, synth(unless=), prefetch worker and chunk-count caching, none on the cold path; the reply case was re-checked on 9620c66 (0.00 s) at S5'
+      - 'Item 3 (story overview still names permission prompts; AC5 listed after AC6): folded into the S9 story update'
+      - 'Item 4 (stage commits and round-3/delta reviewer lines): filled in this record (S0, S2, S5, S6 commits; S4 round_3_reviewers and S5 delta_reviewers already name their diff ranges)'
+      - 'Items 5 (CI numpy on 3.13) and 6 (readme_review, pr_readiness): S10 and S8/S9'
+    commit: ''
+  S8_CAPTURE:
+    status: completed
+    completed_at: '2026-11-15T11:07:12Z'
+    reviewers:
+      - 'Author (Claude Code): /cu:dev-journal, /cu:memory-update, /cu:readme-update invoked in that order'
+    evidence:
+      - 'docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md'
+      - '/cu:dev-journal created the entry above (exists on disk, staged)'
+      - '/cu:memory-update: activeContext.md (US-005 session block, current phase, next steps; resolved items removed), progress.md (works, milestone, known issues incl. the loaded-tail limit, decision log, history), systemPatterns.md (architecture line by lane, two anti-patterns, date), techContext.md (date; CI note updated at S5); projectbrief.md and productContext.md reviewed, unchanged (no scope or product change)'
+      - 'prune-memory-bank.py: rolled the US-004 session block to archive/activeContext-archive.md; the script appended it at the end, so it was moved to the top (newest first) with content verified unchanged (same bytes, same characters); --check: PARTIAL, budget table not readable from this repo (sizes not checked)'
+      - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed: no docs/memory-bank); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line, so counts not checked)'
+      - '/cu:readme-update: READMEs in scope: README.md (Priority lanes section already current), docs/roadmap/README.md (tree generalised to <ID>.yaml, date), docs/dev-journal/README.md (generic, unchanged); scripts/, tests/, memory-bank/, .github/ have no README by repository convention, none created'
+    commit: ''
+  S9_CLOSE:
+    status: completed
+    completed_at: '2026-11-15T11:09:12Z'
+    evidence:
+      - '/cu:story-update: AC1-AC6 ticked as met (AC1 on a quiet machine, decision 23); story overview states permission prompts are out of scope (US-006 reuses the urgent lane), closing S7 item 3; AC5 moved before AC6; S9 progress entry; last_modified 2026-11-15'
+      - 'Story status stays In Progress (Done and card DONE move at the post-merge close, TD-173)'
+      - '/cu:readme-update: ran at S8 (docs/roadmap/README.md updated); since then only the story file changed, so no README needed changes'
+      - 'user-story-validator: 16/16 pass, exit 0'
+      - 'Close docs committed in the S9 commit below'
+    commit: ''
+  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+closure_checks:
+  backlog_status: { status: pending, reason: '' }
+  board_status: { status: pending, reason: '' }
+  dev_journal:
+    status: pass
+    reason: 'docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md'
+  memory_bank:
+    status: pass
+    reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-004 block archived; consistency PASS with COPPER_DOCS_ROOT=.'
+  readme_review:
+    status: pass
+    reason: '/cu:readme-update ran: docs/roadmap/README.md updated; README.md and docs/dev-journal/README.md current'
+  commit_evidence:
+    status: pass
+    reason: 'Checkpoint commits S1 b6a0539, S2 1be3c78, S3 c5b4be7/30a7662/401e234/f5e846a, S6 e9410f8, S9 close docs; every commit pushed after it (decision Q11)'
+  pr_readiness: { status: pending, reason: '' }
+  pr_creation:
+    { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved:
+    status: pass
+    reason: 'Code, tests, docs and CI change delivered; S7 items 3 and 4 closed; item 2 accepted with reason; item 5 (CI numpy run) at S10'
+  dod_verified:
+    status: pass
+    reason: '/cu:dod-verify at S7 (fresh): PASS, no clause FAIL; measured clauses WARN on the author''s record, accepted (decision 23)'
+quality_gates:
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check --no-cache (defaults) on scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py: All checks passed!; --select E4,E7,E9,F,I on scripts/ tests/: All checks passed!; python3 -m py_compile: ok; workflow YAML parses'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 112 tests OK (numpy present); 112 run, 103 passed, 9 skipped with numpy and kokoro_onnx blocked, as the bare 3.10 CI jobs run; 12/12 parallel runs exit 0 (S5)'
+  integration_tests:
+    status: pass
+    evidence: 'Real Kokoro on omarchy, quiet machine (S3 round 3, 401e234; regression re-check on 9620c66 at load 3.4-4.5): status line median 0.74 s / worst 0.80 s (10 runs), re-check 0.59-0.79 s; reply 0.00 s after the chunk; cold case median 1.16 s / worst 1.39 s; stale line 0 chunks'
+  functional_tests:
+    status: pass
+    evidence: 'Hands-on through avatar-play (see S6 evidence): Lucas confirmed the cut, the quick question over a reply (2.0 s), the seamless resume, natural pieces, avatar mouth'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). README.md, CLAUDE.md and memory-bank content reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: 16/16 pass, exit 0; pipeline_validator.py verify S0-S5: pass'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (112 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as the bare CI jobs run it (numpy and kokoro_onnx blocked)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (112 run, 9 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Python linting passes on the changed files'
+    command: 'uvx ruff@0.15.4 check --no-cache scripts/server.py scripts/claude_speak.py tests/test_server.py tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'python3 ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (16/16 pass)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
+pr_readiness:
+  { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: 'Second grilling (2026-11-14, after S4) settled decisions 12-17 in the story file and on issue #5 (comment 6880746792): S5 trust boundary touched, not security-sensitive; hands-on at S6; cold case fixed here (AC6); S3 reopened then fresh S4; upstream later as a batch. Cold baseline measured with scratchpad lanes/cold.py and synth_time.py on omarchy, load average 12: with /warm 3.17, 5.59, 2.85 s; without 4.02, 2.92, 2.44 s; synthesis status line 2.32-3.19 s, question 0.74-0.98 s.'

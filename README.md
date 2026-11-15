@@ -216,6 +216,11 @@ The client (`scripts/claude_speak.py`) is stdlib-only Python. The voice server (
   utterance in memory only, never on disk, for up to an hour while it is running; it exits
   after `CLAUDE_SPEAK_IDLE_TIMEOUT` idle seconds (30 minutes by default), and with no server
   running there is nothing to replay.
+- **Priority lanes**: with several sessions talking, a question goes ahead of reply summaries,
+  which go ahead of status lines. Speech from another session in a higher lane cuts a status
+  line at once; a reply finishes the phrase it is on (a few seconds at most), then resumes after
+  the question without repeating anything. A status line that hasn't started within 5 seconds is dropped, and a
+  session's own status line never interrupts its question or reply. A replay still goes first.
 
 ### Hotkeys
 

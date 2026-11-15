@@ -5,8 +5,6 @@ methodology: continuous-flow
 
 ## TODO
 
-- [ ] [[US-005-priority-lanes]]
-
 - [ ] [[US-006-speak-permission-prompts-and-alert-the]]
 
 - [ ] [[US-007-pronounce-code-identifiers-and-paths-as]]
@@ -30,6 +28,8 @@ methodology: continuous-flow
 - [ ] [[US-016-personas]]
 
 ## DOING
+
+- [/] [[US-005-priority-lanes]]
 
 ## DONE
 
