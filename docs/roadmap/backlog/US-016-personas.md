@@ -9,12 +9,13 @@ status: 'Draft'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 16
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Reduced; split. Priority Medium.
 > - **2026-11-14**: Story file created from GitHub issue #16 (filed 2026-11-07); status Draft.
 
 # US-016: Personas: a voice, tone and avatar per session
@@ -65,3 +66,11 @@ Decisions (2026-11-07):
 - Sessions with no persona get a free one automatically whenever any are defined. With none defined, behaviour is as today.
 - `server.py` passes the persona, mood and gesture to the player as environment variables on each run (`CLAUDE_SPEAK_PERSONA`, `CLAUDE_SPEAK_MOOD`, `CLAUDE_SPEAK_GESTURE`). Players that don't know them ignore them.
 - Verified: user-level settings `env` reaches plugin hook processes. Project-level `env` is documented but still to be confirmed (docs: it applies after the folder is trusted).
+
+## Backlog review (2026-11-16)
+
+- Kept: a persona file, chosen with `CLAUDE_SPEAK_PERSONA` or `/speak-persona`, stored in the durable config dir (#35).
+- Moved: passing persona, mood and gesture to the player is #34 (avatar integration contract); a distinct voice per session is #36.
+- Cut: the auto-assign pool.
+- No longer builds on #13 and #14: personas need voice names, not a switcher or blends.
+- "Speech from all sessions still takes turns" no longer holds: since #5 another session's urgent speech preempts a reply, which then resumes.

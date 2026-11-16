@@ -1,15 +1,15 @@
 # Active context
 
-**Last Updated**: 2026-11-15
+**Last Updated**: 2026-11-16
 
 **Purpose**: the current focus. Rolling: keep the last one or two sessions, move older ones to
 [archive/](archive/activeContext-archive.md).
 
 ## Current phase
 
-Milestone 2 Quiet: #2 barge-in, #3 hush and #4 replay merged (PRs #20, #21, #23), unreleased.
-#5 priority lanes (US-005) is through S7 on `feature/US-005-priority-lanes`; S9 close docs and the
-S10 PR are next, then release 0.4.0.
+Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16: milestone 4
+"Smarter speech" comes next (release 0.5.0), then milestone 3 "Characters"; order in
+`docs/ROADMAP.md`.
 
 ## Session 2026-11-14/15: US-005 , priority lanes (urgent speech preempts chatty speech)
 
@@ -36,10 +36,11 @@ S10 PR are next, then release 0.4.0.
 
 ## Next steps
 
-- [/] US-005: S9 close docs (story overview: permission prompts are US-006; AC order), S10 PR
-      with the CI matrix green (numpy on 3.13), merge on approval, then the close PR.
-- [ ] Release 0.4.0 (brings `again`, the replay key and lanes to installs); laptop update block
-      ends the running `server.py` after updating (the old server keeps running without lanes; `claude-speak stop` only stops playback).
-- [ ] After 0.4.0: `git fetch upstream`; then agent-avatar #7 (COPPER setup first).
+- [ ] Merge PR #29 (pkill pattern in the US-005 update note) and this backlog-review PR.
+- [ ] Laptops: run the 0.4.0 update block (backup, marketplace update, plugin update, end the old
+      `server.py` with `pkill -f '[s]erver.py --data-dir .*claude-speak-claude-speak'`).
+- [ ] Next story: US-030 (restart a stale server after a plugin update), then US-031, US-006.
+- [ ] agent-avatar backlog: apply the review there (finish TD-002, merge US-002 into US-001, park
+      US-004/007/008, cut US-005 and EP-002, pair US-003 with claude-speak #34).
 - [ ] Optional: show "in progress" on GitHub at S0 (an issue label), since `main` only shows a
       story's status after its merge.

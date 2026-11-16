@@ -5,25 +5,31 @@ methodology: continuous-flow
 
 ## TODO
 
+- [ ] [[US-030-restart-a-stale-server-after-a]]
+
+- [ ] [[US-031-settings-drift-test]]
+
 - [ ] [[US-006-speak-permission-prompts-and-alert-the]]
-
-- [ ] [[US-007-pronounce-code-identifiers-and-paths-as]]
-
-- [ ] [[US-008-facts-aware-summaries]]
 
 - [ ] [[US-009-verbosity-levels-and-skipping-trivial-replies]]
 
-- [ ] [[US-010-french-and-multilingual-replies-with-a]]
+- [ ] [[US-032-mute-one-session-not-all]]
 
-- [ ] [[US-011-optional-local-summarizer-backend-ollama-or]]
+- [ ] [[US-007-pronounce-code-identifiers-and-paths-as]]
+
+- [ ] [[US-033-session-lifecycle]]
+
+- [ ] [[US-035-durable-config-dir-that-survives-reinstall]]
+
+- [ ] [[US-037-focus-the-session-that-is-waiting]]
 
 - [ ] [[US-012-do-not-disturb-focus-aware-muting]]
 
+- [ ] [[US-034-avatar-integration-contract]]
+
+- [ ] [[US-036-distinct-voice-per-session]]
+
 - [ ] [[US-013-quick-voice-switcher-that-reaches-all]]
-
-- [ ] [[US-014-voice-blends]]
-
-- [ ] [[SP-015-second-tts-engine-for-accents-and]]
 
 - [ ] [[US-016-personas]]
 
@@ -43,9 +49,12 @@ methodology: continuous-flow
 
 ## CARPARK
 
+- [-] [[US-008-facts-aware-summaries]]
 
-%% kanban:settings
-```
-{"kanban-plugin":"board","new-note-folder":"docs/roadmap/backlog"}
-```
-%%
+- [-] [[US-010-french-and-multilingual-replies-with-a]]
+
+- [-] [[US-014-voice-blends]]
+
+- [-] [[US-011-optional-local-summarizer-backend-ollama-or]]
+
+- [-] [[SP-015-second-tts-engine-for-accents-and]]

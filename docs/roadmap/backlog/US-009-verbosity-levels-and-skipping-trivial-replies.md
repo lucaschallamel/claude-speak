@@ -3,18 +3,19 @@ story_id: 'US-009'
 story_type: 'user_story'
 title: 'Verbosity levels and skipping trivial replies'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'High'
 story_points: 2
 status: 'Draft'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 9
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Narrowed to skipping trivial replies. Priority High.
 > - **2026-11-14**: Story file created from GitHub issue #9 (filed 2026-11-07); status Draft.
 
 # US-009: Verbosity levels and skipping trivial replies
@@ -44,3 +45,9 @@ Effort: S. Could go upstream: yes.
 - Add to `DEFAULTS`, `OVERRIDABLE`, the `plugin.json` `userConfig` and the `/speak-settings` menu.
 - `detailed` uses its own prompt. `chime` plays a bundled short WAV through the server.
 - The skip gate goes in the `cmd_hook` Stop path. Never skip AskUserQuestion or permission prompts.
+
+## Backlog review (2026-11-16)
+
+- Keep only: skip replies like "Done." or "OK." when no tool ran. No new setting.
+- The `chime` and `detailed` levels are parked: `summarize=false` already gives more, and a chime needs a bundled sound and a new server path.
+- Never skip urgent speech (questions, permission prompts).

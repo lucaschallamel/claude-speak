@@ -9,12 +9,13 @@ status: 'Draft'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 13
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Cut to a small story. Priority Medium.
 > - **2026-11-14**: Story file created from GitHub issue #13 (filed 2026-11-07); status Draft.
 
 # US-013: Quick voice switcher that reaches all 54 Kokoro voices
@@ -43,3 +44,8 @@ Kokoro names say what each voice is (first letter = language, second = gender, e
 - Add `skills/speak-voice/SKILL.md`, as thin as the other skills: one `claude-speak voice <arg>` call.
 - Add a `voice` subcommand in `claude_speak.py` that works out the target from the `VOICES` list and the naming rule, then reuses the existing `config --voice ... --preview` path.
 - Store a one-line description per voice for the menu, e.g. from Kokoro's VOICES.md grades.
+
+## Backlog review (2026-11-16)
+
+- Keep `/speak-voice <name>` and a grouped list of the voices.
+- Cut `next`, `random`, the gender and accent flipping, and the per-voice description table.

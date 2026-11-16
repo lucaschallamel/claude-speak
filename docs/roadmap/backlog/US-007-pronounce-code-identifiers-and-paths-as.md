@@ -3,18 +3,19 @@ story_id: 'US-007'
 story_type: 'user_story'
 title: 'Pronounce code identifiers and paths as words'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'High'
 story_points: 2
 status: 'Draft'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 7
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Kept, trimmed. Priority High.
 > - **2026-11-14**: Story file created from GitHub issue #7 (filed 2026-11-07); status Draft.
 
 # US-007: Pronounce code identifiers and paths as words
@@ -44,3 +45,10 @@ Effort: S. Could go upstream: yes.
 - Add a `pronounce()` step in `speakable()`: split snake case and camel case, keep the last two path segments, and say dots in file names.
 - Users can add their own words in `<data>/lexicon.json`.
 - Leave ordinary prose alone ("e.g.", version numbers, URLs).
+
+## Backlog review (2026-11-16)
+
+- English only: `pronounce()` acts only on English speech.
+- No user `lexicon.json`: nobody will maintain it.
+- The "leave URLs alone" rule is already met: `speakable()` replaces URLs with "a link".
+- Add an AC for real speech, including short replies under `SUMMARY_THRESHOLD` and status lines, which skip the summarizer.

@@ -3,18 +3,19 @@ story_id: 'US-010'
 story_type: 'user_story'
 title: 'French and multilingual replies with a matching voice'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'Low'
 story_points: 3
-status: 'Draft'
+status: 'Blocked'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 10
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Parked. Priority Low, status Blocked.
 > - **2026-11-14**: Story file created from GitHub issue #10 (filed 2026-11-07); status Draft.
 
 # US-010: French and multilingual replies with a matching voice
@@ -44,3 +45,7 @@ Today French text is read by an English voice, which mangles it.
 `ff_siwis` is Kokoro's only French voice, and its quality is lower than the English voices.
 
 Effort: M. Could go upstream: yes.
+
+## Backlog review (2026-11-16)
+
+- Parked until French replies are actually heard mangled often. Kokoro has one French voice, and the language detection is speculative. If revived, let the summarizer state the language instead of writing a detector, and limit it to languages Kokoro speaks well.

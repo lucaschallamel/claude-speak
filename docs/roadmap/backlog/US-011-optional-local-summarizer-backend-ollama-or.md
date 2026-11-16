@@ -3,18 +3,19 @@ story_id: 'US-011'
 story_type: 'user_story'
 title: 'Optional local summarizer backend (Ollama or heuristic)'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'Low'
 story_points: 2
-status: 'Draft'
+status: 'Cancelled'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 11
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Cut. Priority Low, status Cancelled.
 > - **2026-11-14**: Story file created from GitHub issue #11 (filed 2026-11-07); status Draft.
 
 # US-011: Optional local summarizer backend (Ollama or heuristic)
@@ -38,3 +39,7 @@ A `summary_backend` setting with values `claude` (default), `ollama` or `none`.
 
 - Branch in `_ask_claude`.
 - Small models ignore the `[mood gesture]` format, so when `CUE` doesn't match, fall back to `[neutral none]`.
+
+## Backlog review (2026-11-16)
+
+- Cut: `claude -p` is always present where Claude Code runs, and a missing binary already degrades to the full text. A second summarizer backend would need its own tests and upkeep.
