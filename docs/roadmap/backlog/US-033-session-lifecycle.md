@@ -2,7 +2,7 @@
 story_id: 'US-033'
 story_type: 'user_story'
 title: 'Session lifecycle: state registry, SessionEnd cleanup, log rotation'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 3
 status: 'Draft'

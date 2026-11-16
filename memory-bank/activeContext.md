@@ -36,11 +36,7 @@ Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16
 
 ## Next steps
 
-- [ ] Merge PR #29 (pkill pattern in the US-005 update note) and this backlog-review PR.
-- [ ] Laptops: run the 0.4.0 update block (backup, marketplace update, plugin update, end the old
-      `server.py` with `pkill -f '[s]erver.py --data-dir .*claude-speak-claude-speak'`).
-- [ ] Next story: US-030 (restart a stale server after a plugin update), then US-031, US-006.
-- [ ] agent-avatar backlog: apply the review there (finish TD-002, merge US-002 into US-001, park
-      US-004/007/008, cut US-005 and EP-002, pair US-003 with claude-speak #34).
-- [ ] Optional: show "in progress" on GitHub at S0 (an issue label), since `main` only shows a
-      story's status after its merge.
+- [ ] Next story: US-030 (restart a stale server after a plugin update), standard profile; then
+      US-031 (lightweight profile: test only), then US-006 (measure the Notification delay at S1).
+- [ ] Laptops: Lucas runs the 0.4.0 update block on each when he is on it.
+- [ ] From now on: `in progress` label at S0 (removed by the close PR); re-estimate points at S1.

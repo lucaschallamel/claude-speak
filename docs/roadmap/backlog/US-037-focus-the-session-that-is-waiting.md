@@ -2,7 +2,7 @@
 story_id: 'US-037'
 story_type: 'user_story'
 title: 'Focus the session that is waiting'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Medium'
 story_points: 2
 status: 'Draft'

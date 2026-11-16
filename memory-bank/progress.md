@@ -19,8 +19,8 @@
 
 - [x] 1 Foundation: v0.3.3 (2026-11-07), PRs #17, #18, #19.
 - [x] 2 Quiet: v0.4.0 (2026-11-15), PRs #20, #21, #23, #26.
-- [ ] 4 Smarter speech, next (release 0.5.0): #30, #31, #6, #9, #32, #7, #33, then #35, #37, #12.
-- [ ] 3 Characters, after 4: #34, #36, #13, #16 (agent-avatar Foundation is done).
+- [ ] 3 Smarter speech, next (release 0.5.0): #30, #31, #6, #9, #32, #7, #33, then #35, #37, #12.
+- [ ] 4 Characters, after 3: #34, #36, #13, #16 (agent-avatar Foundation is done).
 - Parked: #8, #10, #14. Cut (not planned): #11, #15. Order and reasons: backlog review of
   2026-11-16 in `docs/ROADMAP.md` and each story file.
 
@@ -36,8 +36,8 @@
 - 2026-11-14 (US-004): replay restarts the speech playing now rather than an older clip; a
   cancelled job stops waiting for synthesis in flight (rewrites upstream `_run`).
 - 2026-11-14: release stays per milestone; `again` reaches installs with 0.4.0.
-- 2026-11-16 (backlog review: four-seat adversarial council plus a judge): milestone 4 before
-  milestone 3 ("useful first", Lucas's choice over "characters first"); 8 new stories (#30-#37:
+- 2026-11-16 (backlog review: four-seat adversarial council plus a judge): Smarter speech before
+  Characters, milestones renamed 3 and 4 to match ("useful first", Lucas's choice over "characters first"); 8 new stories (#30-#37:
   stale-server restart, settings drift test, mute one session, session lifecycle, avatar
   contract, durable config dir, distinct voice per session, focus the waiting session); US-006
   voice-only first; US-007/009/012/013/016 reduced; #8/#10/#14 parked; #11/#15 cut.

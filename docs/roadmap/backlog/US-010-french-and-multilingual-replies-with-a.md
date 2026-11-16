@@ -2,7 +2,7 @@
 story_id: 'US-010'
 story_type: 'user_story'
 title: 'French and multilingual replies with a matching voice'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Low'
 story_points: 3
 status: 'Blocked'

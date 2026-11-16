@@ -2,7 +2,7 @@
 story_id: 'US-013'
 story_type: 'user_story'
 title: 'Quick voice switcher that reaches all 54 Kokoro voices'
-epic: '3 Characters'
+epic: '4 Characters'
 priority: 'Medium'
 story_points: 2
 status: 'Draft'

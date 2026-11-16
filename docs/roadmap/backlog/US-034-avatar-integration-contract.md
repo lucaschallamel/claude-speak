@@ -2,7 +2,7 @@
 story_id: 'US-034'
 story_type: 'user_story'
 title: 'Avatar integration contract: what each player run carries'
-epic: '3 Characters'
+epic: '4 Characters'
 priority: 'Medium'
 story_points: 3
 status: 'Draft'

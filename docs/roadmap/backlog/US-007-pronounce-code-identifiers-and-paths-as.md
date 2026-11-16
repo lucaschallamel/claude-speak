@@ -2,7 +2,7 @@
 story_id: 'US-007'
 story_type: 'user_story'
 title: 'Pronounce code identifiers and paths as words'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 2
 status: 'Draft'

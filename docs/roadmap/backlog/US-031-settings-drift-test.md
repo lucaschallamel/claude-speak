@@ -2,7 +2,7 @@
 story_id: 'US-031'
 story_type: 'user_story'
 title: 'Settings drift test'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 1
 status: 'Draft'

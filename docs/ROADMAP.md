@@ -6,7 +6,7 @@
 
 **Story IDs** are GitHub issue numbers: `US-002` is issue #2. `SP` marks a spike. New stories start as a GitHub issue; then add its file (same number) and a card.
 
-**Order** (backlog review of 2026-11-16): milestone 4 ships before milestone 3. Within a milestone, stories are listed in build order. Parked and cut stories are at the end.
+**Order**: milestones are numbered in build order (renamed on 2026-11-16 after the backlog review: Smarter speech became 3, Characters 4). Within a milestone, stories are listed in build order. Parked and cut stories are at the end.
 
 ## 1 Foundation
 
@@ -23,7 +23,7 @@ Never talk over Lucas. Shipped as v0.4.0 (2026-11-15).
 - [x] [US-004](roadmap/backlog/US-004-instant-replay-and-global-stop-replay.md) ([#4](https://github.com/lucaschallamel/claude-speak/issues/4)): Instant replay and global stop/replay hotkeys
 - [x] [US-005](roadmap/backlog/US-005-priority-lanes.md) ([#5](https://github.com/lucaschallamel/claude-speak/issues/5)): Priority lanes: urgent speech preempts chatty speech
 
-## 4 Smarter speech (next: release 0.5.0)
+## 3 Smarter speech (next: release 0.5.0)
 
 Say what matters, when it matters, and keep the plumbing honest.
 
@@ -41,7 +41,7 @@ Then, in the same milestone:
 - [ ] [US-037](roadmap/backlog/US-037-focus-the-session-that-is-waiting.md) ([#37](https://github.com/lucaschallamel/claude-speak/issues/37)): Focus the session that is waiting
 - [ ] [US-012](roadmap/backlog/US-012-do-not-disturb-focus-aware-muting.md) ([#12](https://github.com/lucaschallamel/claude-speak/issues/12)): Do-not-disturb, focus-aware muting and a ''while you were away'' recap
 
-## 3 Characters (after 4)
+## 4 Characters (after 3)
 
 Tell sessions apart, and give the avatar what it needs. Starts with the avatar contract.
 

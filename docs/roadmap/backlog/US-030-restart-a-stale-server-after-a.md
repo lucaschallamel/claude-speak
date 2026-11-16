@@ -2,7 +2,7 @@
 story_id: 'US-030'
 story_type: 'user_story'
 title: 'Restart a stale server after a plugin update'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 2
 status: 'Draft'

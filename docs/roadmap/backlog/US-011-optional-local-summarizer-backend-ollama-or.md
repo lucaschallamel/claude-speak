@@ -2,7 +2,7 @@
 story_id: 'US-011'
 story_type: 'user_story'
 title: 'Optional local summarizer backend (Ollama or heuristic)'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Low'
 story_points: 2
 status: 'Cancelled'

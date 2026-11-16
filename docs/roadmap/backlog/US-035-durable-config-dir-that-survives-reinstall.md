@@ -2,7 +2,7 @@
 story_id: 'US-035'
 story_type: 'user_story'
 title: 'Durable config dir that survives reinstall'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Medium'
 story_points: 2
 status: 'Draft'

@@ -2,7 +2,7 @@
 story_id: 'US-009'
 story_type: 'user_story'
 title: 'Verbosity levels and skipping trivial replies'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 2
 status: 'Draft'

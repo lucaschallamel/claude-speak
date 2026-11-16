@@ -2,7 +2,7 @@
 story_id: 'SP-015'
 story_type: 'spike'
 title: 'Spike: second TTS engine for accents and languages Kokoro lacks (Australian, richer French)'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Low'
 story_points: 3
 status: 'Cancelled'
@@ -14,7 +14,7 @@ github_issue: 15
 research_question: 'Which local, offline TTS engine fills Kokoro''s gaps (Australian English, richer French) well enough to be worth a second model?'
 time_box: '2 days'
 expected_outcome: 'Recommendation (or not worth it) on issue #15 with samples; if yes, a follow-up story for engine-prefixed voices'
-decision_deadline: 2027-01-31  # placeholder for: before milestone 4 Smarter speech starts
+decision_deadline: 2027-01-31  # placeholder for: before milestone 3 Smarter speech starts
 ---
 
 > [!note]- Progress updates

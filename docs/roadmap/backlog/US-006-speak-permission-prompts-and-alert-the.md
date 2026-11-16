@@ -2,7 +2,7 @@
 story_id: 'US-006'
 story_type: 'user_story'
 title: 'Speak permission prompts and alert the avatar'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 2
 status: 'Draft'
@@ -58,4 +58,5 @@ Decisions (2026-11-07):
 - The attention state must also clear on UserPromptSubmit and Stop: a denied prompt fires no PostToolUse, so "clear on the next tool event" alone leaves it stuck.
 - Drop the `idle_prompt` setting: nobody will toggle it.
 - Check first: the installed Claude Code (2.1.325) carries `notification_type` and `permission_prompt` in its binary, but the payload and the latency are not measured. If Notification arrives too late for AC1, an observe-only `PermissionRequest` hook is the faster fallback, which reopens the decision that put PermissionRequest out of scope; ask before building it.
+- Decided 2026-11-16 (Lucas): at S1, wire a throwaway Notification hook and measure its delay on a real permission prompt. Reopen an observe-only `PermissionRequest` hook (which never returns a decision) only if Notification is too slow for AC1.
 - Speak through `spawn_worker(..., priority="urgent")` (priority lanes now exist).
