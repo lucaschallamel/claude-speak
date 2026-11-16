@@ -3,18 +3,19 @@ story_id: 'US-014'
 story_type: 'user_story'
 title: 'Voice blends: custom voices mixed from Kokoro style vectors'
 epic: '3 Characters'
-priority: 'Medium'
+priority: 'Low'
 story_points: 2
-status: 'Draft'
+status: 'Blocked'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 14
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Parked. Priority Low, status Blocked.
 > - **2026-11-14**: Story file created from GitHub issue #14 (filed 2026-11-07); status Draft.
 
 # US-014: Voice blends: custom voices mixed from Kokoro style vectors
@@ -46,3 +47,7 @@ Let users define named blends of existing voices, e.g. `narrator = 0.6 bf_emma +
 Mixing voices from different languages gives odd results. Warn when a blend mixes languages.
 
 Effort: S-M. Could go upstream: yes.
+
+## Backlog review (2026-11-16)
+
+- Parked: 54 voices are enough to tell sessions apart (#36), and blends add more server-side divergence from upstream.

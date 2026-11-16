@@ -3,18 +3,19 @@ story_id: 'US-006'
 story_type: 'user_story'
 title: 'Speak permission prompts and alert the avatar'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'High'
 story_points: 2
 status: 'Draft'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 6
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Kept, first story of the next release. Priority High.
 > - **2026-11-14**: Story file created from GitHub issue #6 (filed 2026-11-07); status Draft.
 
 # US-006: Speak permission prompts and alert the avatar
@@ -50,3 +51,11 @@ Decisions (2026-11-07):
 - Speak `permission_prompt`, `elicitation_dialog` and `agent_needs_input` through the `Notification` hook, which can't block or approve anything.
 - `idle_prompt` is a setting, off by default.
 - No voice approval. `PermissionRequest` exists and can allow or deny, but it stays out of scope for security.
+
+## Backlog review (2026-11-16)
+
+- Deliver voice-only first, reusing the existing `[fear handup]` cue through `/cue`. The avatar's sticky attention outline follows as its own avatar story and does not block this one.
+- The attention state must also clear on UserPromptSubmit and Stop: a denied prompt fires no PostToolUse, so "clear on the next tool event" alone leaves it stuck.
+- Drop the `idle_prompt` setting: nobody will toggle it.
+- Check first: the installed Claude Code (2.1.325) carries `notification_type` and `permission_prompt` in its binary, but the payload and the latency are not measured. If Notification arrives too late for AC1, an observe-only `PermissionRequest` hook is the faster fallback, which reopens the decision that put PermissionRequest out of scope; ask before building it.
+- Speak through `spawn_worker(..., priority="urgent")` (priority lanes now exist).

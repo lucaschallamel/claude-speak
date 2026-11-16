@@ -3,13 +3,13 @@ story_id: 'SP-015'
 story_type: 'spike'
 title: 'Spike: second TTS engine for accents and languages Kokoro lacks (Australian, richer French)'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'Low'
 story_points: 3
-status: 'Draft'
+status: 'Cancelled'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 15
 research_question: 'Which local, offline TTS engine fills Kokoro''s gaps (Australian English, richer French) well enough to be worth a second model?'
 time_box: '2 days'
@@ -19,6 +19,7 @@ decision_deadline: 2027-01-31  # placeholder for: before milestone 4 Smarter spe
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Cut. Priority Low, status Cancelled.
 > - **2026-11-14**: Story file created from GitHub issue #15 (filed 2026-11-07); status Draft. Time box 2 days and decision deadline before milestone 4 set by Lucas (2027-01-31 is a placeholder date).
 
 # SP-015: Spike: second TTS engine for accents and languages Kokoro lacks (Australian, richer French)
@@ -50,3 +51,7 @@ Kokoro has no Australian English and only one French voice (`ff_siwis`, rated lo
 - [ ] **AC1**: The Australian and French questions each have an answer backed by samples.
 
 Effort: M (time-boxed spike).
+
+## Backlog review (2026-11-16)
+
+- Cut: even a positive verdict leads to a large follow-up (a second model, a download step, engine routing), the maximum upstream divergence, for accents that are curiosity rather than need.

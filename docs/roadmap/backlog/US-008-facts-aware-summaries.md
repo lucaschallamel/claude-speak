@@ -3,18 +3,19 @@ story_id: 'US-008'
 story_type: 'user_story'
 title: 'Facts-aware summaries: tests, files changed, commits'
 epic: '4 Smarter speech'
-priority: 'Medium'
+priority: 'Low'
 story_points: 3
-status: 'Draft'
+status: 'Blocked'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-07'
-last_modified: '2026-11-14'
+last_modified: '2026-11-16'
 github_issue: 8
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-16**: Backlog review: Parked. Priority Low, status Blocked.
 > - **2026-11-14**: Story file created from GitHub issue #8 (filed 2026-11-07); status Draft.
 
 # US-008: Facts-aware summaries: tests, files changed, commits
@@ -38,3 +39,7 @@ The reply often hides the outcome. Tool results are the ground truth.
   - Bash: regex the output for test results (pytest, jest, cargo, go test, unittest) and for `git commit`.
   - Edit and Write: count the files changed.
 - Pass these to the summarizer in a short `<facts>` block, and add one line to `SUMMARY_PROMPT` telling it to prefer facts.
+
+## Backlog review (2026-11-16)
+
+- Parked: parsing tool results with regexes for several test frameworks is brittle upkeep, and the 20-word summaries already carry the outcome most of the time. Revisit if summaries keep missing it.
