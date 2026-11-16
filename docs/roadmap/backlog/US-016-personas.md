@@ -2,7 +2,7 @@
 story_id: 'US-016'
 story_type: 'user_story'
 title: 'Personas: a voice, tone and avatar per session'
-epic: '3 Characters'
+epic: '4 Characters'
 priority: 'Medium'
 story_points: 3
 status: 'Draft'

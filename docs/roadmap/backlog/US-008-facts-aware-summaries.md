@@ -2,7 +2,7 @@
 story_id: 'US-008'
 story_type: 'user_story'
 title: 'Facts-aware summaries: tests, files changed, commits'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Low'
 story_points: 3
 status: 'Blocked'

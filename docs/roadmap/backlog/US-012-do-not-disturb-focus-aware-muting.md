@@ -2,7 +2,7 @@
 story_id: 'US-012'
 story_type: 'user_story'
 title: 'Do-not-disturb, focus-aware muting and a ''while you were away'' recap'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'Medium'
 story_points: 3
 status: 'Draft'

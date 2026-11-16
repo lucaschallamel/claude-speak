@@ -2,7 +2,7 @@
 story_id: 'US-014'
 story_type: 'user_story'
 title: 'Voice blends: custom voices mixed from Kokoro style vectors'
-epic: '3 Characters'
+epic: '4 Characters'
 priority: 'Low'
 story_points: 2
 status: 'Blocked'

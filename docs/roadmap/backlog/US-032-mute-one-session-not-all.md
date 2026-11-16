@@ -2,7 +2,7 @@
 story_id: 'US-032'
 story_type: 'user_story'
 title: 'Mute one session, not all'
-epic: '4 Smarter speech'
+epic: '3 Smarter speech'
 priority: 'High'
 story_points: 2
 status: 'Draft'

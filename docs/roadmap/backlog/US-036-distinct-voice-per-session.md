@@ -2,7 +2,7 @@
 story_id: 'US-036'
 story_type: 'user_story'
 title: 'Distinct voice per session'
-epic: '3 Characters'
+epic: '4 Characters'
 priority: 'Medium'
 story_points: 2
 status: 'Draft'

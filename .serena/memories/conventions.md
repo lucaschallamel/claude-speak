@@ -5,11 +5,12 @@
 - main is protected: the 4 unittest checks must pass (admin bypass for emergencies only).
 - Release per milestone: bump `.claude-plugin/plugin.json` version via PR, tag `vX.Y.Z`, close the milestone; installed plugin updates with `claude plugin update`.
 - At each milestone start: `git fetch upstream`; merge new upstream work into main through a PR.
-- Milestones: 1 Foundation, 2 Quiet, 3 Characters, 4 Smarter speech (agent-avatar has 3 and 4). Build order follows them; #15 (second TTS engine spike) last.
+- Milestones: 1 Foundation, 2 Quiet, 3 Smarter speech, 4 Characters. They were renamed on 2026-11-16 after the backlog review ("useful first") so the numbers follow build order. Order within a milestone: `docs/ROADMAP.md`.
 - Source of truth: GitHub issues = tracker and discussion; `docs/roadmap/backlog/<ID>.md` = the spec (copied decisions included); keep issue, story file and `docs/roadmap/KANBAN.md` card in step. Current state: `memory-bank/` (read at session start). Session notes: `docs/dev-journal/`. Serena = code conventions; Hindsight = history/reasons; Claude memory = pointers.
 - `gh pr`/`gh issue`: always `--repo lucaschallamel/claude-speak` (gh defaults to upstream).
-- Delivery runs through `/cu:pipe`, using the standard profile for every story (fresh reviews at S4, S5 and S7).
-  - At S1, re-read the issue and its comments and update the story file.
+- Delivery runs through `/cu:pipe`. Use the standard profile (fresh reviews at S4, S5 and S7) for any story that changes runtime code. A story that changes only tests, docs or CI uses the lightweight profile: one fresh review, no hands-on, still a PR and Lucas's approval (decided 2026-11-16).
+  - At S0, add the `in progress` label to the issue. The close PR removes it. Reason: `main` only shows a story's status after its merge.
+  - At S1, re-read the issue and its comments and update the story file. Re-estimate the story points from what S1 finds, and record the actual effort in the dev journal. The point scale is not yet calibrated: US-005 was rated 3 and took two days.
   - Push the feature branch after every checkpoint commit from S1 onwards; no PR until S10.
   - Squash-merge at S10, and record COPPER's ancestry check, which needs a merge commit, as unverified.
   - Then open a close PR (`chore/<ID>-close`). It merges only on its own approval from Lucas.
