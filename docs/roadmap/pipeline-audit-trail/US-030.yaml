@@ -84,7 +84,8 @@ stages:
       - 'User disposition: mitigate all findings ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
       - 'All 9 mitigated: 7 in code and tests, 6 by the story Release section, 7 by docstrings naming the twin; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s4-review.md'
       - 'After fixes: 134 tests OK (8 new); timing classes 5 runs OK; ruff 29 = main baseline'
-    commit: 'see git log: fix(US-030): mitigate S4 findings'
+      - 'Second pass: Lucas ran /ponytail:ponytail-review on main...29aa4f1 (author review, not independent): 2 findings (1 should fix, 1 nice to have); both mitigated on his request; 135 tests OK; recorded in the S4 artefact'
+    commit: '29aa4f1 (S4 fixes); second pass in the next commit'
   S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

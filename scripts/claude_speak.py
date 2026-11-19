@@ -594,13 +594,15 @@ def send_to_server(data: Path, text: str, settings: dict, session: str = "", lab
     """Queue speech. session lets a newer reply replace an older one; label names
     the project aloud when other sessions are speaking too; priority (urgent, normal,
     low) picks the lane, and at (the hook's time) lets the server drop a stale status line."""
-    ensure_server(data)
-    status, _ = request(data, "POST", "/speak",
-                        {"text": text, "voice": settings["voice"], "speed": settings["speed"],
-                         "session": session, "label": label, "priority": priority,
-                         "at": time.time() if at is None else at})
-    if status == 503:
-        log_error(data, "the voice server is exiting; speech dropped")
+    body = {"text": text, "voice": settings["voice"], "speed": settings["speed"],
+            "session": session, "label": label, "priority": priority,
+            "at": time.time() if at is None else at}
+    for _ in range(2):  # 503: the server began quitting since the health check; the retry waits for it
+        ensure_server(data)
+        status, _ = request(data, "POST", "/speak", body)
+        if status != 503:
+            return
+    log_error(data, "the voice server is quitting; speech dropped")
 
 
 def send_cue(mood: str, gesture: str) -> None:

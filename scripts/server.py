@@ -251,7 +251,7 @@ class Speaker:
 
     prefetcher: threading.Thread | None = None  # the one _prefetch worker running, if any
     prefetch_next: Job | None = None  # the question it makes chunk 1 for next
-    closed = False  # set under state_lock by watch_idle once it decides to exit
+    closed = False  # under state_lock: set by close() (/quit) or by watch_idle as it exits
 
     def __init__(self, kokoro: Kokoro, player: list[str] | None, silence: Path):
         self.kokoro = kokoro
@@ -315,8 +315,15 @@ class Speaker:
             if self.proc and self.proc.poll() is None:
                 self.proc.terminate()
 
+    def close(self) -> None:
+        """Refuse new speech, replays and warm-ups from now on; what is queued still plays."""
+        with self.state_lock:
+            self.closed = True
+
     def warm(self) -> None:
         with self.state_lock:
+            if self.closed:
+                raise Closed
             if (not self.player or self.current or self.queue
                     or any(p and p.poll() is None for p in (self.proc, self.warm_proc))):
                 return
@@ -626,7 +633,8 @@ class Handler(BaseHTTPRequestHandler):
                              "player": " ".join(speaker.player or ["none"]),
                              "voices": sorted(speaker.voices),
                              "busy": time.time() < speaker.busy_until,
-                             "version": VERSION, "quitting": self.server.quit.is_set()})
+                             "version": VERSION,
+                             "quitting": self.server.quit.is_set() or speaker.closed})
         else:
             self._json(404, {"error": "not found"})
 
@@ -641,12 +649,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/quit":
                 if not self.server.quit.is_set():
                     log("quitting for a newer version once nothing is queued or playing")
+                speaker.close()  # a chatty old client must not keep a quitting server alive
                 self.server.quit.set()
                 self._json(202, {"ok": True})
-            elif self.server.quit.is_set() and self.path in ("/speak", "/replay", "/warm"):
-                # A chatty old client must not keep a quitting server alive.
-                log(f"refused {self.path}: quitting")
-                self._json(503, {"error": "quitting for a newer version"})
             elif self.path == "/stop":
                 speaker.stop(str(body.get("session") or ""))
                 self._json(200, {"ok": True})
@@ -675,8 +680,8 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop, /replay or /quit"})
         except Closed:
-            log(f"refused {self.path}: exiting")
-            self._json(503, {"error": "server exiting"})
+            log(f"refused {self.path}: quitting")
+            self._json(503, {"error": "quitting"})
         except Exception as exc:
             self._json(500, {"error": str(exc)})
 
@@ -726,8 +731,9 @@ def watch_idle(server: Server, speaker: Speaker, idle_timeout: float,
     """Shut the server down once nothing is queued or playing and either /quit was asked
     or no request came for idle_timeout seconds. /quit wakes it at once, not at the next tick.
 
-    The decision and speaker.closed are set under state_lock, so a /speak that slipped past the
-    handler's quit check either lands before it (and keeps the server busy) or is refused."""
+    /quit closes the speaker first. On an idle exit the decision and speaker.closed are set
+    under state_lock, so a /speak racing the exit either lands before it (and keeps the server
+    busy) or is refused, never accepted and lost."""
     while True:
         quitting = server.quit.wait(tick)
         with speaker.state_lock:

@@ -38,3 +38,17 @@
   QuitTest, EnsureServerTest) passed five runs in a row.
 - `uvx ruff check scripts tests`: 29 findings, the same set as `main`.
 - The fixes change code after the reviewed commit; S5 reviews the new head.
+
+## Second pass: ponytail review of `main...29aa4f1` (2026-11-19)
+
+Lucas ran `/ponytail:ponytail-review` on the branch after the S4 fixes, then asked again for every
+finding to be mitigated. Author review in the same session, so it is not independent; S5 reviews the
+result fresh.
+
+| # | Group | Issue | Mitigation | Test |
+| - | ----- | ----- | ---------- | ---- |
+| P1 | Should fix | Speech reaching the server in the ~0.5 s that `shutdown()` takes after an idle exit, or a same-version client hitting a draining server, got 503 and was dropped; `/health` still said `quitting: false`, so a retry could not help. | `/health` reports `quitting` when the speaker is closed too; `send_to_server` retries a 503 once through `ensure_server()`, which waits for the quitting server and starts a new one, with the same body and hook time; only a second 503 is logged. | `test_health_says_quitting_once_an_idle_exit_has_begun`, `test_speech_refused_once_is_sent_again_to_the_new_server`, `test_speech_refused_twice_is_logged` |
+| P2 | Nice to have | The quitting rule was written twice: a handler pre-check with its own message, and `Closed` from the speaker. | `/quit` calls `Speaker.close()` (under `state_lock`); `speak`, `replay` and now `warm` raise `Closed`; one 503 path and message (`quitting`) in the handler. The handler branch is gone. | `test_quitting_server_refuses_new_speech_but_still_stops` (now against a real queue-only Speaker, queue checked empty), `test_health_reports_version_and_quitting` (checks `closed`) |
+
+After the second pass: 135 tests OK; the timing-sensitive classes passed five runs in a row; ruff 29,
+the `main` baseline.

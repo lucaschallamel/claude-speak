@@ -804,12 +804,14 @@ class ReplayEndpointTest(unittest.TestCase):
 
 
 class QuitTest(unittest.TestCase):
-    """/health's version, POST /quit and the drain before exit (US-030)."""
+    """/health's version, POST /quit and the refusals while quitting (US-030), over a real
+    unix socket with a Speaker that has queue state only."""
 
     def setUp(self):
-        self.fake = mock.Mock(player=["pw-play"], voices={"af_heart"}, busy_until=0.0)
+        self.sp = speaker()
+        self.sp.player = ["pw-play"]
         path = os.path.join(tempfile.mkdtemp(), "s.sock")
-        self.srv = server.Server(path, self.fake, "model")
+        self.srv = server.Server(path, self.sp, "model")
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.addCleanup(self.srv.server_close)
         self.addCleanup(self.srv.shutdown)
@@ -834,22 +836,22 @@ class QuitTest(unittest.TestCase):
         self.assertEqual(self.call("POST", "/quit", {}), (202, {"ok": True}))
         self.assertTrue(self.call("GET", "/health")[1]["quitting"])
         self.assertTrue(self.srv.quit.is_set())
+        self.assertTrue(self.sp.closed)
 
     def test_quitting_server_refuses_new_speech_but_still_stops(self):
         self.call("POST", "/quit", {})
         for endpoint in ("/speak", "/replay", "/warm"):
-            status, _ = self.call("POST", endpoint, {"text": "hi", "session": "s1"})
-            self.assertEqual(status, 503, endpoint)
-        self.fake.speak.assert_not_called()
-        self.fake.replay.assert_not_called()
-        self.fake.warm.assert_not_called()
+            self.assertEqual(self.call("POST", endpoint, {"text": "hi", "session": "s1"}),
+                             (503, {"error": "quitting"}), endpoint)
+        self.assertEqual(self.sp.queue, [])
         self.assertEqual(self.call("POST", "/stop", {})[0], 200)
 
-
-    def test_speech_that_raced_the_exit_is_refused_not_lost(self):
-        self.fake.speak.side_effect = server.Closed  # watch_idle closed the speaker meanwhile
-        status, body = self.call("POST", "/speak", {"text": "hi", "session": "s1"})
-        self.assertEqual((status, body), (503, {"error": "server exiting"}))
+    def test_health_says_quitting_once_an_idle_exit_has_begun(self):
+        # No /quit: watch_idle closed the speaker and shutdown() is under way, so a client
+        # waits for this server to go instead of sending speech it would refuse.
+        self.sp.closed = True
+        self.assertTrue(self.call("GET", "/health")[1]["quitting"])
+        self.assertEqual(self.call("POST", "/speak", {"text": "hi"})[0], 503)
 
 
 def fake_speaker(busy_until):

@@ -446,12 +446,23 @@ class EnsureServerTest(TempDataTest):
         popen.assert_not_called()
         logged.assert_not_called()
 
-    def test_speech_refused_by_an_exiting_server_is_logged(self):
-        with mock.patch.object(cs, "ensure_server"), \
-                mock.patch.object(cs, "request", return_value=(503, b"")), \
+    def test_speech_refused_twice_is_logged(self):
+        with mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch.object(cs, "request", return_value=(503, b"")) as request, \
                 mock.patch.object(cs, "log_error") as logged:
             cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1")
+        self.assertEqual((ensure.call_count, request.call_count), (2, 2))
         self.assertIn("speech dropped", logged.call_args.args[1])
+
+    def test_speech_refused_once_is_sent_again_to_the_new_server(self):
+        # the server began quitting after the health check; ensure_server then waits for it
+        with mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch.object(cs, "request", side_effect=[(503, b""), (202, b"")]) as request, \
+                mock.patch.object(cs, "log_error") as logged:
+            cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1", at=7.0)
+        self.assertEqual(ensure.call_count, 2)
+        self.assertEqual(request.call_args_list[0], request.call_args_list[1])  # same body, same "at"
+        logged.assert_not_called()
 
     def test_server_from_before_quit_existed_is_used_at_once(self):
         old = {"ok": True}
