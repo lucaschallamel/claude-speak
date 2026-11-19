@@ -494,6 +494,7 @@ def server_health(data: Path) -> dict | None:
 
 
 def plugin_version(manifest: Path = ROOT / ".claude-plugin" / "plugin.json") -> str:
+    """Twin of server.plugin_version: the server runs standalone under uv and imports nothing from here."""
     try:
         return str(json.loads(manifest.read_text()).get("version") or "")
     except (OSError, ValueError, AttributeError):
@@ -519,20 +520,36 @@ def _stale(health: dict) -> bool:
     return bool(mine) and _version_tuple(health.get("version") or "") < mine
 
 
+def _replaceable(health: dict) -> bool:
+    """Older than this client, or already quitting because another client asked: either way,
+    wait for it to go rather than send it speech it would refuse."""
+    return _stale(health) or bool(health.get("quitting"))
+
+
 def _retire(data: Path, health: dict) -> dict | None:
     """Ask an older server to exit once its speech is done and wait for it to go: None when it
     has gone. A server from before /quit existed refuses it and is used as it is."""
+    if not health.get("quitting"):
+        try:
+            status, _ = request(data, "POST", "/quit")
+        except (OSError, http.client.HTTPException):
+            status = 0
+        if status != 202:
+            return health
+    overran = data / "retire-overran"
     try:
-        status, _ = request(data, "POST", "/quit")
-    except (OSError, http.client.HTTPException):
-        status = 0
-    if status != 202:
-        return health
+        if time.time() - overran.stat().st_mtime < RETIRE_WAIT:
+            return health  # a drain just overran: don't make every queued worker wait again
+    except OSError:
+        pass
     deadline = time.time() + RETIRE_WAIT
+    misses = 0
     while time.time() < deadline:
         time.sleep(0.5)
-        if not server_health(data):
+        misses = 0 if server_health(data) else misses + 1
+        if misses >= 2:  # one slow /health on a loaded machine is not "gone"
             return None
+    overran.touch()
     log_error(data, f"old server {health.get('version') or '(no version)'} still draining after "
                     f"{RETIRE_WAIT} s; speech dropped")
     return health
@@ -542,16 +559,18 @@ def ensure_server(data: Path, wait: float = 900) -> dict:
     """Start the TTS server if needed, replacing one older than this client.
     The first start downloads the model."""
     health = server_health(data)
-    if health and not _stale(health):
+    if health and not _replaceable(health):
         return health
     uv = shutil.which("uv")
     if not uv:
+        if health:
+            return health  # can't start a newer one, so the old one speaks (a quitting one refuses: logged)
         raise RuntimeError("uv is required to run the Kokoro server: https://docs.astral.sh/uv/")
 
     with open(data / "server.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         health = server_health(data)
-        if health and _stale(health):
+        if health and _replaceable(health):
             health = _retire(data, health)
         if health:
             return health
@@ -576,10 +595,12 @@ def send_to_server(data: Path, text: str, settings: dict, session: str = "", lab
     the project aloud when other sessions are speaking too; priority (urgent, normal,
     low) picks the lane, and at (the hook's time) lets the server drop a stale status line."""
     ensure_server(data)
-    request(data, "POST", "/speak",
-            {"text": text, "voice": settings["voice"], "speed": settings["speed"],
-             "session": session, "label": label, "priority": priority,
-             "at": time.time() if at is None else at})
+    status, _ = request(data, "POST", "/speak",
+                        {"text": text, "voice": settings["voice"], "speed": settings["speed"],
+                         "session": session, "label": label, "priority": priority,
+                         "at": time.time() if at is None else at})
+    if status == 503:
+        log_error(data, "the voice server is exiting; speech dropped")
 
 
 def send_cue(mood: str, gesture: str) -> None:
@@ -925,7 +946,6 @@ def cmd_status(args) -> None:
     if health:
         print(f"version:     {health.get('version') or 'unknown (older than 0.5.0)'}"
               f"{' (quitting)' if health.get('quitting') else ''}; this client {VERSION or 'unknown'}")
-    if health:
         print(f"model:       {health.get('model')}")
         print(f"player:      {health.get('player')}")
         print(f"voices:      {len(health.get('voices', []))} available")

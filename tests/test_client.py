@@ -306,7 +306,8 @@ class LanesTest(TempDataTest):
         send.assert_called_once_with(self.data, "Checking.", {}, "s1", "", "low", job["t"])
 
     def test_the_speak_body_carries_priority_and_at(self):
-        with mock.patch.object(cs, "ensure_server"), mock.patch.object(cs, "request") as request:
+        with mock.patch.object(cs, "ensure_server"), \
+                mock.patch.object(cs, "request", return_value=(202, b"")) as request:
             cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1", "p", "urgent", 7.0)
         request.assert_called_once_with(self.data, "POST", "/speak", {
             "text": "hi", "voice": "v", "speed": 1.0, "session": "s1", "label": "p",
@@ -398,11 +399,59 @@ class EnsureServerTest(TempDataTest):
             popen.assert_not_called()
 
     def test_older_server_is_asked_to_quit_then_replaced(self):
-        # outside the lock, inside it, gone after /quit, then the new server answers
-        result, request, popen, _ = self.ensure([self.OLD, self.OLD, None, self.NEW])
+        # outside the lock, inside it, gone twice after /quit, then the new server answers
+        result, request, popen, _ = self.ensure([self.OLD, self.OLD, None, None, self.NEW])
         self.assertEqual(result, self.NEW)
         request.assert_called_once_with(self.data, "POST", "/quit")
         popen.assert_called_once()
+
+    def test_one_slow_health_check_is_not_gone(self):
+        # a miss, then the old server answers again, then it has really gone
+        result, _, popen, _ = self.ensure([self.OLD, self.OLD, None, self.OLD, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        popen.assert_called_once()
+
+    def test_quit_that_cannot_be_sent_uses_the_old_server(self):
+        started = mock.Mock()
+        with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                mock.patch.object(cs, "server_health", side_effect=[self.OLD, self.OLD]), \
+                mock.patch.object(cs, "request", side_effect=ConnectionRefusedError), \
+                mock.patch.object(cs.shutil, "which", return_value="/usr/bin/uv"), \
+                mock.patch.object(cs.subprocess, "Popen", return_value=started) as popen:
+            self.assertEqual(cs.ensure_server(self.data), self.OLD)
+        popen.assert_not_called()
+
+    def test_server_already_quitting_is_waited_for_without_a_second_quit(self):
+        quitting = {"ok": True, "version": "0.5.0", "quitting": True}  # a newer client asked
+        result, request, popen, _ = self.ensure([quitting, quitting, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        request.assert_not_called()
+        popen.assert_called_once()
+
+    def test_no_uv_keeps_using_the_old_server(self):
+        with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                mock.patch.object(cs, "server_health", return_value=self.OLD), \
+                mock.patch.object(cs.shutil, "which", return_value=None):
+            self.assertEqual(cs.ensure_server(self.data), self.OLD)
+        with mock.patch.object(cs, "server_health", return_value=None), \
+                mock.patch.object(cs.shutil, "which", return_value=None), \
+                self.assertRaises(RuntimeError):
+            cs.ensure_server(self.data)
+
+    def test_after_an_overrun_queued_workers_do_not_wait_again(self):
+        (self.data / "retire-overran").touch()
+        result, request, popen, logged = self.ensure([self.OLD, self.OLD])
+        self.assertEqual(result, self.OLD)
+        request.assert_called_once()  # /quit is still asked, harmlessly
+        popen.assert_not_called()
+        logged.assert_not_called()
+
+    def test_speech_refused_by_an_exiting_server_is_logged(self):
+        with mock.patch.object(cs, "ensure_server"), \
+                mock.patch.object(cs, "request", return_value=(503, b"")), \
+                mock.patch.object(cs, "log_error") as logged:
+            cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1")
+        self.assertIn("speech dropped", logged.call_args.args[1])
 
     def test_server_from_before_quit_existed_is_used_at_once(self):
         old = {"ok": True}
@@ -417,6 +466,7 @@ class EnsureServerTest(TempDataTest):
         self.assertEqual(result, self.OLD)
         popen.assert_not_called()
         self.assertIn("still draining", logged.call_args.args[1])
+        self.assertTrue((self.data / "retire-overran").exists())
 
     def test_another_worker_replaced_it_while_this_one_waited_for_the_lock(self):
         result, request, popen, _ = self.ensure([self.OLD, self.NEW])

@@ -15,6 +15,7 @@ github_issue: 30
 
 > [!note]- Progress updates
 >
+> - **2026-11-19**: [S4_CODE_REVIEW] Fresh review PASS, 9 findings (5 Low, 4 Info); Lucas asked for all to be mitigated: 7 fixed in code and tests (134 pass), 2 handled by docs and the release checklist.
 > - **2026-11-19**: [S3_EXECUTE] Server reports its version, /quit drains then exits, 503 while quitting; client replaces only an older server; status shows the version; 14 new tests (126 pass); README and CLAUDE.md updated.
 > - **2026-11-19**: [S1_KICKOFF] Scope refined: restart only an older server, drain then exit, 503 while quitting, 120 s wait; old servers need one last manual step (Lucas); ACs 3 -> 4; points 2 -> 3; profile standard.
 > - **2026-11-19**: [S0_SELECT] Story selected, Orca worktree and branch feature/US-030-stale-server-restart created, pipeline initiated; status In Progress.
@@ -55,5 +56,10 @@ Effort: S. Could go upstream: yes.
 2. **Newer wins:** restart only an older server; an older client uses a newer server, because the API only grows. Reason: two sessions on different versions would otherwise restart each other forever.
 3. **Drain, then refuse:** a quitting server finishes what it has queued and answers new speech with 503. Speech from an old client during the drain is lost and logged.
 4. **Wait bound:** 120 s, then log and drop that one utterance; the next speech tries again. Workers are detached, so the wait is not visible. (Corrected at S2: a quitting server refuses new speech, so "speak through the old server" could not work.)
+
+## Release
+
+- Release 0.5.0 must bump `.claude-plugin/plugin.json` to `0.5.0`: AC1 starts with that version, and the `status` text calls an unversioned server "older than 0.5.0".
+- The 0.5.0 update block keeps the `pkill` line once, for the 0.4.x server (S1 decision 1).
 
 S1 artefact: [US-030-s1-kickoff.md](../pipeline-audit-trail/artifacts/US-030-s1-kickoff.md).

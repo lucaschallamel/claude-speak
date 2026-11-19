@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S4_CODE_REVIEW
+current_stage: S5_ARCH_SEC_COMP_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-19T17:36:42Z'
@@ -70,8 +70,21 @@ stages:
       - 'AC3: met by QuitTest, WatchIdleTest, VersionTest, EnsureServerTest'
       - 'AC4: _stale is false for the same or a newer server; VersionTest and EnsureServerTest same-or-newer case'
       - 'Deviation log: none beyond the S2 correction (utterance dropped past the wait)'
-    commit: 'see git log: docs(US-030): complete S3'
-  S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+    commit: 'f92e345'
+  S4_CODE_REVIEW:
+    status: completed
+    completed_at: '2026-11-19T19:30:00Z'
+    reviewed_commit: 'f92e345d3bc82c64451ccf5fdaf08d95eeb38fb4'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story file, git diff main...f92e345 and the code it touches; Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed findings 1, 2, 4; nothing further'
+    evidence:
+      - 'Delegated to /cu:quality-review (fresh-context): Overall Status: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 5 low, 4 info'
+      - 'User disposition: mitigate all findings ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'All 9 mitigated: 7 in code and tests, 6 by the story Release section, 7 by docstrings naming the twin; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s4-review.md'
+      - 'After fixes: 134 tests OK (8 new); timing classes 5 runs OK; ruff 29 = main baseline'
+    commit: 'see git log: fix(US-030): mitigate S4 findings'
   S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

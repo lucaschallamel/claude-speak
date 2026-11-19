@@ -846,6 +846,16 @@ class QuitTest(unittest.TestCase):
         self.assertEqual(self.call("POST", "/stop", {})[0], 200)
 
 
+    def test_speech_that_raced_the_exit_is_refused_not_lost(self):
+        self.fake.speak.side_effect = server.Closed  # watch_idle closed the speaker meanwhile
+        status, body = self.call("POST", "/speak", {"text": "hi", "session": "s1"})
+        self.assertEqual((status, body), (503, {"error": "server exiting"}))
+
+
+def fake_speaker(busy_until):
+    return mock.Mock(busy_until=busy_until, state_lock=threading.Lock(), closed=False)
+
+
 class WatchIdleTest(unittest.TestCase):
     def watch(self, srv, speaker, idle_timeout=3600):
         t = threading.Thread(target=server.watch_idle, args=(srv, speaker, idle_timeout),
@@ -856,23 +866,34 @@ class WatchIdleTest(unittest.TestCase):
     def test_quit_on_an_idle_server_exits_at_once(self):
         srv = mock.Mock(quit=threading.Event(), last_used=time.time())
         srv.quit.set()
-        self.watch(srv, mock.Mock(busy_until=0.0)).join(2)
+        self.watch(srv, fake_speaker(0.0)).join(2)
         srv.shutdown.assert_called_once()
 
     def test_quit_on_a_busy_server_waits_for_its_speech(self):
         srv = mock.Mock(quit=threading.Event(), last_used=time.time())
-        speaker = mock.Mock(busy_until=time.time() + 3600)  # queued or playing
+        speaker = fake_speaker(time.time() + 3600)  # queued or playing
         srv.quit.set()
         t = self.watch(srv, speaker)
         time.sleep(0.2)
         srv.shutdown.assert_not_called()
+        self.assertFalse(speaker.closed)
         speaker.busy_until = time.time()  # the queue emptied
         t.join(2)
         srv.shutdown.assert_called_once()
+        self.assertTrue(speaker.closed)
+
+    def test_a_closed_speaker_refuses_speech_and_replay(self):
+        sp = speaker()
+        sp.closed = True
+        with self.assertRaises(server.Closed):
+            sp.speak("hi", "bm_george", 1.0, session="a")
+        with self.assertRaises(server.Closed):
+            sp.replay("a")
+        self.assertEqual(sp.queue, [])
 
     def test_no_quit_and_recent_use_keeps_running(self):
         srv = mock.Mock(quit=threading.Event(), last_used=time.time())
-        t = self.watch(srv, mock.Mock(busy_until=0.0))
+        t = self.watch(srv, fake_speaker(0.0))
         time.sleep(0.2)
         srv.shutdown.assert_not_called()
         srv.last_used = 0.0  # idle past the timeout

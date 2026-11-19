@@ -70,7 +70,9 @@ MANIFEST = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.j
 
 
 def plugin_version(manifest: Path = MANIFEST) -> str:
-    """The plugin version this server runs; the client restarts an older server after an update."""
+    """The plugin version this server runs; the client restarts an older server after an update.
+    claude_speak.plugin_version is its twin: this script runs standalone under uv and imports
+    nothing from the client."""
     try:
         return str(json.loads(manifest.read_text()).get("version") or "")
     except (OSError, ValueError, AttributeError):
@@ -234,6 +236,10 @@ def hook_time(at, now: float) -> float:
     return at if math.isfinite(at) and at <= now else now
 
 
+class Closed(Exception):
+    """The server is exiting: speech can no longer be queued."""
+
+
 class Speaker:
     """Plays utterances one at a time, by lane (PRIORITIES), in order within a lane.
 
@@ -245,6 +251,7 @@ class Speaker:
 
     prefetcher: threading.Thread | None = None  # the one _prefetch worker running, if any
     prefetch_next: Job | None = None  # the question it makes chunk 1 for next
+    closed = False  # set under state_lock by watch_idle once it decides to exit
 
     def __init__(self, kokoro: Kokoro, player: list[str] | None, silence: Path):
         self.kokoro = kokoro
@@ -350,6 +357,8 @@ class Speaker:
         # priority is the client's request; any process that can reach the socket (the user's) may ask.
         lane = PRIORITIES.get(priority, NORMAL) if isinstance(priority, str) else NORMAL
         with self.state_lock:
+            if self.closed:
+                raise Closed
             now = time.time()
             asked_at = hook_time(at, now)
             if lane == LOW and any(j.session == session and j.priority < LOW and not j.cancelled
@@ -441,6 +450,8 @@ class Speaker:
         It interrupts what is playing; queued speech plays after it.
         """
         with self.state_lock:
+            if self.closed:
+                raise Closed
             queued = next((j for j in self.queue if j.replay), None)
             if queued and session in ("", queued.session):
                 return True  # a double tap: the replay already queued plays once
@@ -663,6 +674,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(payload)
             else:
                 self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop, /replay or /quit"})
+        except Closed:
+            log(f"refused {self.path}: exiting")
+            self._json(503, {"error": "server exiting"})
         except Exception as exc:
             self._json(500, {"error": str(exc)})
 
@@ -710,11 +724,18 @@ def watch_dictation(path: Path, stop, interval: float = 0.1) -> None:
 def watch_idle(server: Server, speaker: Speaker, idle_timeout: float,
                tick: float = 15, drain_tick: float = 0.2) -> None:
     """Shut the server down once nothing is queued or playing and either /quit was asked
-    or no request came for idle_timeout seconds. /quit wakes it at once, not at the next tick."""
+    or no request came for idle_timeout seconds. /quit wakes it at once, not at the next tick.
+
+    The decision and speaker.closed are set under state_lock, so a /speak that slipped past the
+    handler's quit check either lands before it (and keeps the server busy) or is refused."""
     while True:
         quitting = server.quit.wait(tick)
-        now = time.time()
-        if now > speaker.busy_until and (quitting or now - server.last_used > idle_timeout):
+        with speaker.state_lock:
+            now = time.time()
+            exiting = now > speaker.busy_until and (quitting or now - server.last_used > idle_timeout)
+            if exiting:
+                speaker.closed = True
+        if exiting:
             log("quit for a newer version; exiting" if quitting else "idle; exiting")
             server.shutdown()
             return
