@@ -16,7 +16,7 @@ Speech plays in lanes: a replay first, then "urgent" (questions), "normal" (repl
 session in a higher lane cuts a status line at once and a reply at its next chunk;
 the reply resumes afterwards. A status line not started 5 s after "at" is dropped.
 
-  GET  /health   model, player and voices
+  GET  /health   model, player, voices, busy, version and quitting
   POST /speak    {"text", "voice", "speed", "session", "label", "priority"?, "at"?}; returns
                  at once, plays in turn; "priority" is urgent, normal (default) or low, "at"
                  the epoch time of the hook that asked for it; priority is a request, not
@@ -27,6 +27,8 @@ the reply resumes afterwards. A status line not started 5 s after "at" is droppe
   POST /replay   {"session"?}; say the last thing again at once: the speech playing now restarts
                  from the top, else that session's (or the most recent) stored utterance plays
                  without synthesis; 404 when there is none
+  POST /quit     exit once nothing is queued or playing, for a newer version; meanwhile
+                 /speak, /replay and /warm answer 503
 """
 
 from __future__ import annotations
@@ -62,6 +64,20 @@ MODELS = {
     "int8": "kokoro-v1.0.int8.onnx",  # ~90 MB, fastest on slow CPUs
 }
 VOICES_FILE = "voices-v1.0.bin"
+
+
+MANIFEST = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
+
+
+def plugin_version(manifest: Path = MANIFEST) -> str:
+    """The plugin version this server runs; the client restarts an older server after an update."""
+    try:
+        return str(json.loads(manifest.read_text()).get("version") or "")
+    except (OSError, ValueError, AttributeError):
+        return ""
+
+
+VERSION = plugin_version()
 
 # Kokoro voice names start with a language code.
 LANGS = {"a": "en-us", "b": "en-gb", "e": "es", "f": "fr-fr", "h": "hi",
@@ -598,7 +614,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True, "model": self.server.model_name,
                              "player": " ".join(speaker.player or ["none"]),
                              "voices": sorted(speaker.voices),
-                             "busy": time.time() < speaker.busy_until})
+                             "busy": time.time() < speaker.busy_until,
+                             "version": VERSION, "quitting": self.server.quit.is_set()})
         else:
             self._json(404, {"error": "not found"})
 
@@ -610,7 +627,16 @@ class Handler(BaseHTTPRequestHandler):
             text = str(body.get("text", "")).strip()
             voice = str(body.get("voice") or "af_heart")
             speed = min(2.0, max(0.5, float(body.get("speed") or 1.0)))
-            if self.path == "/stop":
+            if self.path == "/quit":
+                if not self.server.quit.is_set():
+                    log("quitting for a newer version once nothing is queued or playing")
+                self.server.quit.set()
+                self._json(202, {"ok": True})
+            elif self.server.quit.is_set() and self.path in ("/speak", "/replay", "/warm"):
+                # A chatty old client must not keep a quitting server alive.
+                log(f"refused {self.path}: quitting")
+                self._json(503, {"error": "quitting for a newer version"})
+            elif self.path == "/stop":
                 speaker.stop(str(body.get("session") or ""))
                 self._json(200, {"ok": True})
             elif self.path == "/replay":
@@ -636,7 +662,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(payload)
             else:
-                self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop or /replay"})
+                self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop, /replay or /quit"})
         except Exception as exc:
             self._json(500, {"error": str(exc)})
 
@@ -648,6 +674,7 @@ class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.speaker = speaker
         self.model_name = model_name
         self.last_used = time.time()
+        self.quit = threading.Event()  # set by /quit
         # Only this user may connect (the socket can land in a shared /tmp). Set at bind, so
         # there is no window; nothing else runs yet that could be affected by the umask.
         old_umask = os.umask(0o177)
@@ -678,6 +705,21 @@ def watch_dictation(path: Path, stop, interval: float = 0.1) -> None:
                 stop()
             was_idle = idle
         time.sleep(interval)
+
+
+def watch_idle(server: Server, speaker: Speaker, idle_timeout: float,
+               tick: float = 15, drain_tick: float = 0.2) -> None:
+    """Shut the server down once nothing is queued or playing and either /quit was asked
+    or no request came for idle_timeout seconds. /quit wakes it at once, not at the next tick."""
+    while True:
+        quitting = server.quit.wait(tick)
+        now = time.time()
+        if now > speaker.busy_until and (quitting or now - server.last_used > idle_timeout):
+            log("quit for a newer version; exiting" if quitting else "idle; exiting")
+            server.shutdown()
+            return
+        if quitting:
+            time.sleep(drain_tick)
 
 
 def socket_in_use(path: Path) -> bool:
@@ -722,21 +764,12 @@ def main() -> None:
 
     server = Server(str(sock), speaker, MODELS[args.model])
 
-    def idle_watch():
-        while True:
-            time.sleep(15)
-            now = time.time()
-            if now - server.last_used > args.idle_timeout and now > speaker.busy_until:
-                log("idle; exiting")
-                server.shutdown()
-                return
-
-    threading.Thread(target=idle_watch, daemon=True).start()
+    threading.Thread(target=watch_idle, args=(server, speaker, args.idle_timeout), daemon=True).start()
     dictation = Path(DICTATION_STATE)
     if dictation.is_file():
         threading.Thread(target=watch_dictation, args=(dictation, speaker.stop), daemon=True).start()
         log(f"watching dictation state {dictation}")
-    log(f"listening on {sock}")
+    log(f"listening on {sock}; version {VERSION or 'unknown'}")
     try:
         server.serve_forever()
     finally:

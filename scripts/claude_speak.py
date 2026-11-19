@@ -39,6 +39,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SERVER_SCRIPT = ROOT / "scripts" / "server.py"
+# How long a newer client waits for an older server to finish its speech and exit.
+RETIRE_WAIT = 120
 
 # Replies at or under this length are spoken as-is, without a summary.
 SUMMARY_THRESHOLD = 280
@@ -491,10 +493,56 @@ def server_health(data: Path) -> dict | None:
         return None
 
 
+def plugin_version(manifest: Path = ROOT / ".claude-plugin" / "plugin.json") -> str:
+    try:
+        return str(json.loads(manifest.read_text()).get("version") or "")
+    except (OSError, ValueError, AttributeError):
+        return ""
+
+
+VERSION = plugin_version()
+
+
+def _version_tuple(version) -> tuple:
+    """Turn "0.10.2" into (0, 10, 2); missing or unparseable is (), below every real version."""
+    try:
+        return tuple(int(part) for part in str(version).split("."))
+    except ValueError:
+        return ()
+
+
+def _stale(health: dict) -> bool:
+    """True only for a server older than this client: an older client keeps using a newer
+    server, else two sessions on two versions would restart each other's server forever.
+    An unreadable client version never restarts anything."""
+    mine = _version_tuple(VERSION)
+    return bool(mine) and _version_tuple(health.get("version") or "") < mine
+
+
+def _retire(data: Path, health: dict) -> dict | None:
+    """Ask an older server to exit once its speech is done and wait for it to go: None when it
+    has gone. A server from before /quit existed refuses it and is used as it is."""
+    try:
+        status, _ = request(data, "POST", "/quit")
+    except (OSError, http.client.HTTPException):
+        status = 0
+    if status != 202:
+        return health
+    deadline = time.time() + RETIRE_WAIT
+    while time.time() < deadline:
+        time.sleep(0.5)
+        if not server_health(data):
+            return None
+    log_error(data, f"old server {health.get('version') or '(no version)'} still draining after "
+                    f"{RETIRE_WAIT} s; speech dropped")
+    return health
+
+
 def ensure_server(data: Path, wait: float = 900) -> dict:
-    """Start the TTS server if needed. The first start downloads the model."""
+    """Start the TTS server if needed, replacing one older than this client.
+    The first start downloads the model."""
     health = server_health(data)
-    if health:
+    if health and not _stale(health):
         return health
     uv = shutil.which("uv")
     if not uv:
@@ -503,6 +551,8 @@ def ensure_server(data: Path, wait: float = 900) -> dict:
     with open(data / "server.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         health = server_health(data)
+        if health and _stale(health):
+            health = _retire(data, health)
         if health:
             return health
         log = open(data / "server.log", "ab")
@@ -872,6 +922,9 @@ def cmd_status(args) -> None:
     print(f"data dir:    {data}")
     print(f"settings:    {_describe(settings)}")
     print(f"server:      {'running' if health else 'not running'}")
+    if health:
+        print(f"version:     {health.get('version') or 'unknown (older than 0.5.0)'}"
+              f"{' (quitting)' if health.get('quitting') else ''}; this client {VERSION or 'unknown'}")
     if health:
         print(f"model:       {health.get('model')}")
         print(f"player:      {health.get('player')}")

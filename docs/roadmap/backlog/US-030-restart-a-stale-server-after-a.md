@@ -15,6 +15,7 @@ github_issue: 30
 
 > [!note]- Progress updates
 >
+> - **2026-11-19**: [S3_EXECUTE] Server reports its version, /quit drains then exits, 503 while quitting; client replaces only an older server; status shows the version; 14 new tests (126 pass); README and CLAUDE.md updated.
 > - **2026-11-19**: [S1_KICKOFF] Scope refined: restart only an older server, drain then exit, 503 while quitting, 120 s wait; old servers need one last manual step (Lucas); ACs 3 -> 4; points 2 -> 3; profile standard.
 > - **2026-11-19**: [S0_SELECT] Story selected, Orca worktree and branch feature/US-030-stale-server-restart created, pipeline initiated; status In Progress.
 > - **2026-11-16**: Story file created from GitHub issue #30, filed by the backlog review of 2026-11-16; status Draft.
@@ -45,7 +46,7 @@ Effort: S. Could go upstream: yes.
 - A new `/quit` endpoint makes the server exit once its queue is empty and nothing plays. It never cuts speech in progress.
 - `/health` returns `version`. The client restarts the server only when that version is lower than its own (dotted numeric compare). A missing version counts as lower. A server that refuses `/quit` (older than this story) is used as it is, at once, with no wait.
 - While quitting, the server answers `/speak` and `/replay` with 503, so a chatty old client cannot keep it alive. It exits within about a second of its queue emptying, not at the next 15 s idle tick.
-- The client waits up to 120 s for the old server to go. Past that it logs the problem and speaks through the old server rather than lose the speech.
+- The client waits up to 120 s for the old server to go. Past that it logs the problem and drops that one utterance (the quitting server refuses it); the next speech tries again.
 - `claude-speak status` prints the server's version.
 
 ## Decisions (S1, 2026-11-19)
@@ -53,6 +54,6 @@ Effort: S. Could go upstream: yes.
 1. **Old servers (Lucas):** no automatic kill for servers from before this story. The 0.5.0 update block keeps the `pkill` line one last time. Reason: smallest change, no signal-sending code, no platform-specific process lookup.
 2. **Newer wins:** restart only an older server; an older client uses a newer server, because the API only grows. Reason: two sessions on different versions would otherwise restart each other forever.
 3. **Drain, then refuse:** a quitting server finishes what it has queued and answers new speech with 503. Speech from an old client during the drain is lost and logged.
-4. **Wait bound:** 120 s, then fall back to the old server. Workers are detached, so the wait is not visible.
+4. **Wait bound:** 120 s, then log and drop that one utterance; the next speech tries again. Workers are detached, so the wait is not visible. (Corrected at S2: a quitting server refuses new speech, so "speak through the old server" could not work.)
 
 S1 artefact: [US-030-s1-kickoff.md](../pipeline-audit-trail/artifacts/US-030-s1-kickoff.md).

@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S2_PLAN
+current_stage: S4_CODE_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-19T17:36:42Z'
@@ -42,9 +42,35 @@ stages:
       - 'Story points re-estimated 2 -> 3 (decision of 2026-11-16)'
       - 'Decisions posted on issue #30'
       - 'Branch pushed to origin after the checkpoint commit'
-    commit: 'see git log: docs(US-030): complete S1'
-  S2_PLAN: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
-  S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+    commit: 'b1252e8'
+  S2_PLAN:
+    status: completed
+    completed_at: '2026-11-19T18:20:00Z'
+    reviewers:
+      - 'Author (Claude Code)'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-030-s2-plan.md'
+      - 'Alternatives: 4 considered (script path, socket per version, kill by PID, any-difference compare); all rejected with reasons'
+      - 'What could go wrong: 6 risks with guards'
+      - 'Deviation from S1: past the 120 s wait the utterance is dropped and logged (a quitting server refuses speech); story file updated'
+    commit: 'committed with S3'
+  S3_EXECUTE:
+    status: completed
+    completed_at: '2026-11-19T18:55:00Z'
+    reviewers:
+      - 'Author (Claude Code): AC self-review below'
+    evidence:
+      - 'scripts/server.py: plugin_version()/VERSION; /health adds version and quitting; POST /quit (202, sets Server.quit); /speak, /replay, /warm answer 503 while quitting; watch_idle() replaces the inline idle watcher and wakes on /quit'
+      - 'scripts/claude_speak.py: plugin_version()/VERSION, _version_tuple, _stale (older only), _retire (/quit, 120 s wait, old server used as is when /quit is refused); ensure_server() checks both health reads; status prints the version'
+      - 'tests: 14 new (QuitTest 3, WatchIdleTest 3, VersionTest 3, EnsureServerTest 5); python3 -m unittest discover tests: 126 tests OK'
+      - 'ruff: 29 findings, the same set as main (3 new ones fixed: B008, 2 RUF012)'
+      - 'Docs: README fork additions (Restart after an update, one-time pkill for pre-0.5.0 servers), CLAUDE.md architecture paragraph, server endpoint docstring'
+      - 'AC1: code path in place (ensure_server -> _retire -> start); real-hardware check at S6'
+      - 'AC2: watch_idle exits only when not busy (busy covers queued and playing); WatchIdleTest busy case; real-hardware check at S6'
+      - 'AC3: met by QuitTest, WatchIdleTest, VersionTest, EnsureServerTest'
+      - 'AC4: _stale is false for the same or a newer server; VersionTest and EnsureServerTest same-or-newer case'
+      - 'Deviation log: none beyond the S2 correction (utterance dropped past the wait)'
+    commit: 'see git log: docs(US-030): complete S3'
   S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

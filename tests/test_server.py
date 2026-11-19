@@ -803,6 +803,83 @@ class ReplayEndpointTest(unittest.TestCase):
         fake.speak.assert_called_once_with("hi", "af_heart", 1.0, "s1", "", "urgent", 12.5)
 
 
+class QuitTest(unittest.TestCase):
+    """/health's version, POST /quit and the drain before exit (US-030)."""
+
+    def setUp(self):
+        self.fake = mock.Mock(player=["pw-play"], voices={"af_heart"}, busy_until=0.0)
+        path = os.path.join(tempfile.mkdtemp(), "s.sock")
+        self.srv = server.Server(path, self.fake, "model")
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.addCleanup(self.srv.server_close)
+        self.addCleanup(self.srv.shutdown)
+
+    def call(self, method, endpoint, body=None):
+        conn = claude_speak._UnixConnection(Path(self.srv.server_address), 5)
+        conn.request(method, endpoint, body=json.dumps(body) if body is not None else None,
+                     headers={"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        return resp.status, json.loads(resp.read())
+
+    def test_plugin_version_read_from_the_manifest(self):
+        manifest = Path(tempfile.mkdtemp()) / "plugin.json"
+        manifest.write_text('{"name": "claude-speak", "version": "1.2.3"}')
+        self.assertEqual(server.plugin_version(manifest), "1.2.3")
+        self.assertEqual(server.plugin_version(manifest.with_name("missing.json")), "")
+        self.assertEqual(server.VERSION, json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"])
+
+    def test_health_reports_version_and_quitting(self):
+        _, body = self.call("GET", "/health")
+        self.assertEqual((body["version"], body["quitting"]), (server.VERSION, False))
+        self.assertEqual(self.call("POST", "/quit", {}), (202, {"ok": True}))
+        self.assertTrue(self.call("GET", "/health")[1]["quitting"])
+        self.assertTrue(self.srv.quit.is_set())
+
+    def test_quitting_server_refuses_new_speech_but_still_stops(self):
+        self.call("POST", "/quit", {})
+        for endpoint in ("/speak", "/replay", "/warm"):
+            status, _ = self.call("POST", endpoint, {"text": "hi", "session": "s1"})
+            self.assertEqual(status, 503, endpoint)
+        self.fake.speak.assert_not_called()
+        self.fake.replay.assert_not_called()
+        self.fake.warm.assert_not_called()
+        self.assertEqual(self.call("POST", "/stop", {})[0], 200)
+
+
+class WatchIdleTest(unittest.TestCase):
+    def watch(self, srv, speaker, idle_timeout=3600):
+        t = threading.Thread(target=server.watch_idle, args=(srv, speaker, idle_timeout),
+                             kwargs={"tick": 0.05, "drain_tick": 0.01}, daemon=True)
+        t.start()
+        return t
+
+    def test_quit_on_an_idle_server_exits_at_once(self):
+        srv = mock.Mock(quit=threading.Event(), last_used=time.time())
+        srv.quit.set()
+        self.watch(srv, mock.Mock(busy_until=0.0)).join(2)
+        srv.shutdown.assert_called_once()
+
+    def test_quit_on_a_busy_server_waits_for_its_speech(self):
+        srv = mock.Mock(quit=threading.Event(), last_used=time.time())
+        speaker = mock.Mock(busy_until=time.time() + 3600)  # queued or playing
+        srv.quit.set()
+        t = self.watch(srv, speaker)
+        time.sleep(0.2)
+        srv.shutdown.assert_not_called()
+        speaker.busy_until = time.time()  # the queue emptied
+        t.join(2)
+        srv.shutdown.assert_called_once()
+
+    def test_no_quit_and_recent_use_keeps_running(self):
+        srv = mock.Mock(quit=threading.Event(), last_used=time.time())
+        t = self.watch(srv, mock.Mock(busy_until=0.0))
+        time.sleep(0.2)
+        srv.shutdown.assert_not_called()
+        srv.last_used = 0.0  # idle past the timeout
+        t.join(2)
+        srv.shutdown.assert_called_once()
+
+
 class WatchDictationTest(unittest.TestCase):
     def test_stops_once_per_press_and_ignores_missing_file(self):
         state = Path(tempfile.mkdtemp()) / "state"

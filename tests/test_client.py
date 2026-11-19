@@ -347,5 +347,83 @@ class AgainTest(TempDataTest):
         self.assertEqual(said, "claude-speak: replaying.")
 
 
+class VersionTest(unittest.TestCase):
+    def test_version_tuple(self):
+        self.assertEqual(cs._version_tuple("0.10.2"), (0, 10, 2))
+        self.assertEqual(cs._version_tuple(""), ())
+        self.assertEqual(cs._version_tuple("0.5.0-dev"), ())
+        self.assertGreater(cs._version_tuple("0.10.0"), cs._version_tuple("0.9.9"))
+
+    def test_only_an_older_server_is_stale(self):
+        with mock.patch.object(cs, "VERSION", "0.5.0"):
+            self.assertTrue(cs._stale({"version": "0.4.9"}))
+            self.assertTrue(cs._stale({}))  # from before /health had a version
+            self.assertFalse(cs._stale({"version": "0.5.0"}))
+            self.assertFalse(cs._stale({"version": "0.6.0"}))  # an older client keeps a newer server
+        with mock.patch.object(cs, "VERSION", ""):
+            self.assertFalse(cs._stale({}))  # unreadable client version: never restart
+
+    def test_client_reads_the_plugin_manifest(self):
+        self.assertEqual(cs.VERSION, json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"])
+
+
+OLD_HEALTH = {"ok": True, "version": "0.4.9"}
+NEW_HEALTH = {"ok": True, "version": "0.5.0"}
+
+
+class EnsureServerTest(TempDataTest):
+    """ensure_server() replacing an older server (US-030); no real server or uv."""
+
+    OLD = OLD_HEALTH
+    NEW = NEW_HEALTH
+
+    def ensure(self, health, quit_status=202):
+        started = mock.Mock()
+        started.poll.return_value = None
+        with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                mock.patch.object(cs, "server_health", side_effect=health), \
+                mock.patch.object(cs, "request", return_value=(quit_status, b"")) as request, \
+                mock.patch.object(cs.shutil, "which", return_value="/usr/bin/uv"), \
+                mock.patch.object(cs.subprocess, "Popen", return_value=started) as popen, \
+                mock.patch.object(cs.time, "sleep"), \
+                mock.patch.object(cs, "log_error") as logged:
+            result = cs.ensure_server(self.data)
+        return result, request, popen, logged
+
+    def test_same_or_newer_server_is_used_as_it_is(self):
+        for health in (self.NEW, {"ok": True, "version": "0.6.0"}):
+            result, request, popen, _ = self.ensure([health])
+            self.assertEqual(result, health)
+            request.assert_not_called()
+            popen.assert_not_called()
+
+    def test_older_server_is_asked_to_quit_then_replaced(self):
+        # outside the lock, inside it, gone after /quit, then the new server answers
+        result, request, popen, _ = self.ensure([self.OLD, self.OLD, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        request.assert_called_once_with(self.data, "POST", "/quit")
+        popen.assert_called_once()
+
+    def test_server_from_before_quit_existed_is_used_at_once(self):
+        old = {"ok": True}
+        result, request, popen, _ = self.ensure([old, old], quit_status=400)
+        self.assertEqual(result, old)
+        request.assert_called_once()
+        popen.assert_not_called()
+
+    def test_drain_past_the_wait_is_logged_and_nothing_starts(self):
+        with mock.patch.object(cs, "RETIRE_WAIT", 0):
+            result, _, popen, logged = self.ensure([self.OLD, self.OLD])
+        self.assertEqual(result, self.OLD)
+        popen.assert_not_called()
+        self.assertIn("still draining", logged.call_args.args[1])
+
+    def test_another_worker_replaced_it_while_this_one_waited_for_the_lock(self):
+        result, request, popen, _ = self.ensure([self.OLD, self.NEW])
+        self.assertEqual(result, self.NEW)
+        request.assert_not_called()
+        popen.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
