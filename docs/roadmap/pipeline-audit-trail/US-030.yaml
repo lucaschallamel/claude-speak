@@ -1,0 +1,76 @@
+schema_version: 2
+story_id: US-030
+story_path: docs/roadmap/backlog/US-030-restart-a-stale-server-after-a.md
+github_issue: 'lucaschallamel/claude-speak#30'
+feature_branch: feature/US-030-stale-server-restart
+worktree: ~/orca/workspaces/claude-speak/us-030-stale-server-restart
+review_profile: standard
+change_surface:
+  code: true
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S2_PLAN
+status: active
+status_reason: ''
+initiated_at: '2026-11-19T17:36:42Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-19T17:36:42Z'
+    evidence:
+      - 'Orca worktree us-030-stale-server-restart created from main 40fd212 (no issue link: Orca links upstream issues by mistake)'
+      - 'Branch feature/US-030-stale-server-restart created; session moved in with EnterWorktree'
+      - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
+      - 'Label in progress added to issue #30 (decision of 2026-11-16)'
+      - 'pipeline_validator audit at init: passed (US-004, US-005), exit 0'
+    commit: 'S0 changes committed with S1'
+  S1_KICKOFF:
+    status: completed
+    completed_at: '2026-11-19T18:05:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: one decision via AskUserQuestion (old servers: one last manual step, the recommended option)'
+    evidence:
+      - 'Issue #30 re-read 2026-11-19: no comments before kickoff'
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-030-s1-kickoff.md'
+      - 'Challenge log: 7 entries (standard minimum 3); all resolved'
+      - 'Story file updated: ACs 3 -> 4 (AC4 newer wins), AC1 scoped to 0.5.0 onwards, technical requirements, decisions section'
+      - 'Story points re-estimated 2 -> 3 (decision of 2026-11-16)'
+      - 'Decisions posted on issue #30'
+      - 'Branch pushed to origin after the checkpoint commit'
+    commit: 'see git log: docs(US-030): complete S1'
+  S2_PLAN: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+closure_checks:
+  backlog_status: { status: pending, reason: '' }
+  board_status: { status: pending, reason: '' }
+  dev_journal: { status: pending, reason: '' }
+  memory_bank: { status: pending, reason: '' }
+  readme_review: { status: pending, reason: '' }
+  commit_evidence: { status: pending, reason: '' }
+  pr_readiness: { status: pending, reason: '' }
+  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved: { status: pending, reason: '' }
+  dod_verified: { status: pending, reason: '' }
+quality_gates:
+  lint: { status: pending, evidence: '' }
+  unit_tests: { status: pending, evidence: '' }
+  integration_tests: { status: pending, evidence: '' }
+  functional_tests: { status: pending, evidence: '' }
+  docs_quality: { status: pending, evidence: '' }
+  validators: { status: pending, evidence: '' }
+verified_claims: []
+pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: ''
