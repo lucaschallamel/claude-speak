@@ -137,7 +137,8 @@ stages:
       - 'Author (Claude Code) via /cu:dev-journal, /cu:memory-update, /cu:readme-update, in that order'
       - 'Lucas: README decision via AskUserQuestion (no change, the recommended option)'
     evidence:
-      - '/cu:dev-journal: docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md (test -f: exists)'
+      - 'docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md'
+      - '/cu:dev-journal ran; the journal file above exists (test -f)'
       - '/cu:memory-update: all six files reviewed; activeContext.md (US-031 session block, next steps), progress.md (works, decision log, history), systemPatterns.md (settings anti-pattern names the test and parse_known_args), techContext.md (mutation-in-scratch method) updated; productContext.md and projectbrief.md unchanged (no scope or positioning change)'
       - 'prune-memory-bank.py: US-030 session block rolled to archive/activeContext-archive.md (appended before removal); --check exit 0 (budget table not readable here, sizes not checked)'
       - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line)'
