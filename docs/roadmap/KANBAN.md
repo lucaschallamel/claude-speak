@@ -5,8 +5,6 @@ methodology: continuous-flow
 
 ## TODO
 
-- [ ] [[US-030-restart-a-stale-server-after-a]]
-
 - [ ] [[US-031-settings-drift-test]]
 
 - [ ] [[US-006-speak-permission-prompts-and-alert-the]]
@@ -34,6 +32,8 @@ methodology: continuous-flow
 - [ ] [[US-016-personas]]
 
 ## DOING
+
+- [/] [[US-030-restart-a-stale-server-after-a]]
 
 ## DONE
 

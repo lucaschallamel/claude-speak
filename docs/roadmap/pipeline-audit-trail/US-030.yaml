@@ -1,0 +1,247 @@
+schema_version: 2
+story_id: US-030
+story_path: docs/roadmap/backlog/US-030-restart-a-stale-server-after-a.md
+github_issue: 'lucaschallamel/claude-speak#30'
+feature_branch: feature/US-030-stale-server-restart
+worktree: ~/orca/workspaces/claude-speak/us-030-stale-server-restart
+review_profile: standard
+change_surface:
+  code: true
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S10_MERGE
+status: active
+status_reason: ''
+initiated_at: '2026-11-19T17:36:42Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-19T17:36:42Z'
+    evidence:
+      - 'Orca worktree us-030-stale-server-restart created from main 40fd212 (no issue link: Orca links upstream issues by mistake)'
+      - 'Branch feature/US-030-stale-server-restart created; session moved in with EnterWorktree'
+      - 'Story status Draft -> In Progress; Kanban card TODO -> DOING'
+      - 'Label in progress added to issue #30 (decision of 2026-11-16)'
+      - 'pipeline_validator audit at init: passed (US-004, US-005), exit 0'
+    commit: 'S0 changes committed with S1'
+  S1_KICKOFF:
+    status: completed
+    completed_at: '2026-11-19T18:05:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: one decision via AskUserQuestion (old servers: one last manual step, the recommended option)'
+    evidence:
+      - 'Issue #30 re-read 2026-11-19: no comments before kickoff'
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-030-s1-kickoff.md'
+      - 'Challenge log: 7 entries (standard minimum 3); all resolved'
+      - 'Story file updated: ACs 3 -> 4 (AC4 newer wins), AC1 scoped to 0.5.0 onwards, technical requirements, decisions section'
+      - 'Story points re-estimated 2 -> 3 (decision of 2026-11-16)'
+      - 'Decisions posted on issue #30'
+      - 'Branch pushed to origin after the checkpoint commit'
+    commit: 'b1252e8'
+  S2_PLAN:
+    status: completed
+    completed_at: '2026-11-19T18:20:00Z'
+    reviewers:
+      - 'Author (Claude Code)'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-030-s2-plan.md'
+      - 'Alternatives: 4 considered (script path, socket per version, kill by PID, any-difference compare); all rejected with reasons'
+      - 'What could go wrong: 6 risks with guards'
+      - 'Deviation from S1: past the 120 s wait the utterance is dropped and logged (a quitting server refuses speech); story file updated'
+    commit: 'committed with S3'
+  S3_EXECUTE:
+    status: completed
+    completed_at: '2026-11-19T18:55:00Z'
+    reviewers:
+      - 'Author (Claude Code): AC self-review below'
+    evidence:
+      - 'scripts/server.py: plugin_version()/VERSION; /health adds version and quitting; POST /quit (202, sets Server.quit); /speak, /replay, /warm answer 503 while quitting; watch_idle() replaces the inline idle watcher and wakes on /quit'
+      - 'scripts/claude_speak.py: plugin_version()/VERSION, _version_tuple, _stale (older only), _retire (/quit, 120 s wait, old server used as is when /quit is refused); ensure_server() checks both health reads; status prints the version'
+      - 'tests: 14 new (QuitTest 3, WatchIdleTest 3, VersionTest 3, EnsureServerTest 5); python3 -m unittest discover tests: 126 tests OK'
+      - 'ruff: 29 findings, the same set as main (3 new ones fixed: B008, 2 RUF012)'
+      - 'Docs: README fork additions (Restart after an update, one-time pkill for pre-0.5.0 servers), CLAUDE.md architecture paragraph, server endpoint docstring'
+      - 'AC1: code path in place (ensure_server -> _retire -> start); real-hardware check at S6'
+      - 'AC2: watch_idle exits only when not busy (busy covers queued and playing); WatchIdleTest busy case; real-hardware check at S6'
+      - 'AC3: met by QuitTest, WatchIdleTest, VersionTest, EnsureServerTest'
+      - 'AC4: _stale is false for the same or a newer server; VersionTest and EnsureServerTest same-or-newer case'
+      - 'Deviation log: none beyond the S2 correction (utterance dropped past the wait)'
+    commit: 'f92e345'
+  S4_CODE_REVIEW:
+    status: completed
+    completed_at: '2026-11-19T19:30:00Z'
+    reviewed_commit: 'f92e345d3bc82c64451ccf5fdaf08d95eeb38fb4'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story file, git diff main...f92e345 and the code it touches; Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed findings 1, 2, 4; nothing further'
+    evidence:
+      - 'Delegated to /cu:quality-review (fresh-context): Overall Status: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 5 low, 4 info'
+      - 'User disposition: mitigate all findings ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'All 9 mitigated: 7 in code and tests, 6 by the story Release section, 7 by docstrings naming the twin; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s4-review.md'
+      - 'After fixes: 134 tests OK (8 new); timing classes 5 runs OK; ruff 29 = main baseline'
+      - 'Second pass: Lucas ran /ponytail:ponytail-review on main...29aa4f1 (author review, not independent): 2 findings (1 should fix, 1 nice to have); both mitigated on his request; 135 tests OK; recorded in the S4 artefact'
+    commit: '29aa4f1 (S4 fixes); second pass in the next commit'
+  S5_ARCH_SEC_COMP_REVIEW:
+    status: completed
+    completed_at: '2026-11-20T10:00:00Z'
+    reviewed_commit: '7891888de9c6a4b2188e1deb3daa1cf72aeeb993'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: arch-review method, fresh-context-review.md, story file, git diff main...7891888, CLAUDE.md, trust-boundary list from main; Verdict dictated: no'
+      - 'Author pass after the fresh report: agreed with all 9 findings; nothing further'
+    evidence:
+      - 'Delegated to /cu:arch-review (fresh-context): Overall Status: PASS'
+      - 'Findings: 0 critical, 0 high, 0 medium, 3 low, 6 info; risk register R1-R6'
+      - 'trust boundary touched, not security-sensitive: /quit reachable only by the same user over the 0600 socket, parses no new input, grants nothing the user could not already do (kill the process)'
+      - 'Compliance: no new stored data beyond an empty marker file in the user data dir; nothing leaves the machine; no new dependency'
+      - 'Process note: the reviewer ran one git checkout of the same commit despite read-only instructions; verified branch intact, HEAD 7891888, tree clean'
+      - 'User disposition: mitigate all findings ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
+      - 'Mitigated: 1 waiting notice on a terminal, 2 server drain cap DRAIN_CAP=100 s below RETIRE_WAIT, 3 dev data-dir note in CLAUDE.md, 5 socket removed only if same inode, 7 overrun marker removed on a clean retire, 8 /synth refused once closed and held until written; 4 and 6 accepted with reasons; 9 nothing to do; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s5-review.md'
+      - 'After fixes: 140 tests OK (5 new); timing classes 5 runs OK; ruff 29 = main baseline'
+    commit: '3ccf298 (S5 fixes)'
+  S6_TEST_QUALITY_VERIFY:
+    status: completed
+    completed_at: '2026-11-20T07:30:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate, gates mapped to the project (unittest, ruff@0.15.4 defaults and the CI select, no formatter, story validator, pipeline validator)'
+      - 'Hands-on on real hardware (omarchy, real Kokoro, avatar-play player): scratch plugin copies at 0.4.0 (main), 0.5.0, 0.5.1, 0.5.2 (DRAIN_CAP=4) and 0.5.3 on their own data dir, installed model shared by symlink; scripts s6-setup.sh, s6-run.sh, s6-old.sh in the session scratchpad'
+    evidence:
+      - 'Delegated to /cu:qa-gate: PASS (unit tests, lint, compile, story validator); markdown formatter not applicable'
+      - 'AC1: 0.5.1 client found a 0.5.0 server mid-reply; server.log: quitting 07:24:47, exiting 07:25:08, 0.5.1 listening 07:25:16; the 0.5.1 utterance spoken by the new server (say returned after 29 s: 21 s drain + 8 s model load)'
+      - 'AC2: the old server finished its whole 21 s reply before exiting (quit 07:24:47 -> exit 07:25:08), then the new one spoke'
+      - 'AC3: 140 unit tests OK; 140 run, 9 skipped with numpy and kokoro_onnx blocked, as CI runs them'
+      - 'AC4: a 0.5.0 client spoke through the 0.5.1 server at once (say returned in under 1 s), no /quit in server.log'
+      - 'S5 finding 2 on hardware: a 0.5.2 server built with DRAIN_CAP=4, mid-reply when 0.5.3 arrived: "still draining after 4 s; stopping speech" 07:25:55, exited, 0.5.3 listening 07:26:03'
+      - 'S5 finding 8 on hardware: say --out through the 0.5.3 server wrote a 60460-byte WAV'
+      - 'Pre-0.5.0 server (main, 0.4.0): refused /quit, kept speaking for the 0.5.3 client (utterance in its log), status shows "unknown (older than 0.5.0)"; claude-speak.log empty; retire-overran absent'
+      - 'Not covered on hardware: the terminal waiting line (the test shell is not a terminal; unit-tested), a truly hung player (simulated by the 4 s cap), macOS (CI runs the unit tests there)'
+      - 'claude plugin validate: fails on the reserved plugin name claude-speak, pre-existing on main (the plugin-rename topic), not touched by this story'
+      - 'Correction: ruff 0.15.4 is clean; the "29 = main baseline" in S4/S5 was unpinned latest ruff with newer rules'
+      - 'User disposition: "continue to s7" (accept)'
+    commit: 'ef0b279'
+  S7_CRITICAL_REVIEW:
+    status: completed
+    completed_at: '2026-11-20T08:30:00Z'
+    reviewed_commit: 'ef0b279'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent, read-only; inputs: commands/dod-verify.md (DoD Level 1 from framework-authoring/resources/definition-of-done.md), fresh-context-review.md, story, git diff main...ef0b279, pipeline_validator.py status output, the pipeline YAML and artefacts (author claims only), CLAUDE.md; Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed F1-F3; HTTP /synth 503 already tested since S5; found A1 (pre-existing server.log handle leak)'
+    evidence:
+      - 'Delegated to /cu:dod-verify: WARN; AC1a, AC1b, AC2 (bounded), AC3, AC4 PASS; no FAIL; WARN on DRY (deliberate twin), coverage, integration automation, API docstring, story spec; SKIP on version bump, CHANGELOG, principle tags, S8, PR'
+      - 'Challenge log: 7 entries from 2 perspectives (user updating the plugin, maintainer), all assessed; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s7-review.md'
+      - 'User disposition: "review, assess, mitigate all issues, findings and risks, if any, with precision and care"'
+      - 'F1: story AC2, /quit requirement, 503 list and decision 3 aligned with the code (drain cap, /warm and /synth, single retry)'
+      - 'F2: server docstring lists /synth and the drain cap'
+      - 'F3: say --out retries a 503 once through ensure_server(); tests for the retry and the status version line'
+      - 'F4: accepted at S5 (finding 4); F5: release step added to the story (claude-speak status across a real update); F6: committed here'
+      - 'A1: client closes its copy of the server.log handle after Popen; 0 ResourceWarnings'
+      - 'After fixes: 142 tests OK; 142 run, 9 skipped with numpy blocked; timing classes 5 runs OK; ruff 0.15.4 defaults and CI select clean'
+    commit: 'f101934'
+  S8_CAPTURE:
+    status: completed
+    completed_at: '2026-11-20T09:00:00Z'
+    reviewers:
+      - 'Author (Claude Code): /cu:dev-journal, /cu:memory-update, /cu:readme-update in that order'
+    evidence:
+      - 'docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md'
+      - '/cu:memory-update: activeContext.md (US-030 session block, current phase, next steps), progress.md (works, decision log, history), systemPatterns.md (newer-server-wins pattern, two fork divergences: watch_idle and ensure_server/send_to_server, nested-waits anti-pattern), techContext.md (version handoff checks, pinned ruff, worktree guard); projectbrief.md and productContext.md reviewed, unchanged (no scope or product change)'
+      - 'prune-memory-bank.py: rolled the US-005 session block to archive/activeContext-archive.md; the script appended it at the end, so it was moved to the top (newest first), same words verified; --check: PARTIAL (budget table not readable here); sizes measured with tiktoken cl100k_base: 223-1232 tokens per file, all far under budget'
+      - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line)'
+      - '/cu:readme-update: README.md restart bullet reworded (it said nothing is cut off next to the 100 s cap); docs/roadmap/README.md and docs/dev-journal/README.md generic, unchanged; scripts/, tests/, memory-bank/ have no README by repository convention, none created'
+    commit: '718294f (with S9)'
+  S9_CLOSE:
+    status: completed
+    completed_at: '2026-11-20T09:20:00Z'
+    evidence:
+      - '/cu:story-update: AC1-AC4 ticked as met (AC1, AC2 on real hardware at S6; AC3 by 142 unit tests; AC4 by tests and on hardware); S9 progress entry; last_modified 2026-11-20'
+      - 'Story status stays In Progress (Done and card DONE move at the post-merge close, TD-173)'
+      - '/cu:readme-update: ran at S8 (README.md restart bullet reworded); since then only the story file and pipeline record changed, so no README needed changes'
+      - 'user-story-validator: 24/24 pass, exit 0'
+      - 'Close docs (S8 capture and S9) committed in the S9 commit below and pushed'
+    commit: '718294f'
+  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+closure_checks:
+  backlog_status: { status: pending, reason: 'Story stays In Progress until the merge; Done at the post-merge close (TD-173)' }
+  board_status: { status: pending, reason: 'Card stays in DOING until the merge; DONE at the post-merge close (TD-173)' }
+  dev_journal:
+    status: pass
+    reason: 'docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md'
+  memory_bank:
+    status: pass
+    reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-005 block archived (newest first); consistency PASS with COPPER_DOCS_ROOT=.'
+  readme_review:
+    status: pass
+    reason: 'README.md restart bullet current and reworded; other READMEs in scope generic and unchanged'
+  commit_evidence:
+    status: pass
+    reason: 'Checkpoint commits S0+S1 b1252e8, S3 f92e345, S4 29aa4f1 and 7891888 (ponytail pass), S5 3ccf298, S6 ef0b279, S7 f101934, S8+S9 close docs 718294f; every commit pushed after it'
+  pr_readiness: { status: pending, reason: '' }
+  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved:
+    status: pass
+    reason: 'Code, tests and docs delivered; every S4, ponytail, S5 and S7 finding mitigated or accepted with its reason; the 0.5.0 version bump and the real-update status check are release steps in the story Release section'
+  dod_verified:
+    status: pass
+    reason: '/cu:dod-verify at S7 (fresh): WARN, all ACs PASS, no FAIL; every WARN item mitigated at S7 (f101934)'
+quality_gates:
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check --no-cache (defaults) on scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py: All checks passed!; --select E4,E7,E9,F,I on scripts/ tests/: All checks passed!; python3 -m py_compile: ok'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 140 tests OK; 140 run, 9 skipped with numpy and kokoro_onnx blocked; timing classes 5 runs in a row OK (S5)'
+  integration_tests:
+    status: pass
+    evidence: 'Real Kokoro and player on omarchy, scratch data dir: 0.5.0 -> 0.5.1 handoff after a full drain, 0.5.2 -> 0.5.3 with a 4 s drain cap, /synth WAV, 0.4.0 server refusing /quit (see S6 evidence)'
+  functional_tests:
+    status: pass
+    evidence: 'claude-speak say and status through the bin/ wrapper at each version; status shows the server and client versions'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). README.md and CLAUDE.md changes reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: all pass, exit 0; pipeline_validator.py verify S5: pass'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (140 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as the bare CI jobs run it (numpy and kokoro_onnx blocked)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (140 run, 9 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Ruff defaults pass on the changed Python files'
+    command: 'uvx ruff@0.15.4 check --no-cache scripts/server.py scripts/claude_speak.py tests/test_server.py tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'Ruff CI selection passes'
+    command: 'uvx ruff@0.15.4 check --no-cache --select E4,E7,E9,F,I scripts tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'uv run --with pyyaml python ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All validations passed)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
+pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: ''

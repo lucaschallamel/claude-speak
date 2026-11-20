@@ -3,6 +3,8 @@
 Run: python3 -m unittest discover tests
 """
 
+import argparse
+import contextlib
 import io
 import json
 import os
@@ -306,7 +308,8 @@ class LanesTest(TempDataTest):
         send.assert_called_once_with(self.data, "Checking.", {}, "s1", "", "low", job["t"])
 
     def test_the_speak_body_carries_priority_and_at(self):
-        with mock.patch.object(cs, "ensure_server"), mock.patch.object(cs, "request") as request:
+        with mock.patch.object(cs, "ensure_server"), \
+                mock.patch.object(cs, "request", return_value=(202, b"")) as request:
             cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1", "p", "urgent", 7.0)
         request.assert_called_once_with(self.data, "POST", "/speak", {
             "text": "hi", "voice": "v", "speed": 1.0, "session": "s1", "label": "p",
@@ -345,6 +348,177 @@ class AgainTest(TempDataTest):
         request, said = self.run_again({"ok": True}, session="s1")
         request.assert_called_once_with(mock.ANY, "POST", "/replay", {"session": "s1"})
         self.assertEqual(said, "claude-speak: replaying.")
+
+
+class VersionTest(unittest.TestCase):
+    def test_version_tuple(self):
+        self.assertEqual(cs._version_tuple("0.10.2"), (0, 10, 2))
+        self.assertEqual(cs._version_tuple(""), ())
+        self.assertEqual(cs._version_tuple("0.5.0-dev"), ())
+        self.assertGreater(cs._version_tuple("0.10.0"), cs._version_tuple("0.9.9"))
+
+    def test_only_an_older_server_is_stale(self):
+        with mock.patch.object(cs, "VERSION", "0.5.0"):
+            self.assertTrue(cs._stale({"version": "0.4.9"}))
+            self.assertTrue(cs._stale({}))  # from before /health had a version
+            self.assertFalse(cs._stale({"version": "0.5.0"}))
+            self.assertFalse(cs._stale({"version": "0.6.0"}))  # an older client keeps a newer server
+        with mock.patch.object(cs, "VERSION", ""):
+            self.assertFalse(cs._stale({}))  # unreadable client version: never restart
+
+    def test_client_reads_the_plugin_manifest(self):
+        self.assertEqual(cs.VERSION, json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"])
+
+
+OLD_HEALTH = {"ok": True, "version": "0.4.9"}
+NEW_HEALTH = {"ok": True, "version": "0.5.0"}
+
+
+class EnsureServerTest(TempDataTest):
+    """ensure_server() replacing an older server (US-030); no real server or uv."""
+
+    OLD = OLD_HEALTH
+    NEW = NEW_HEALTH
+
+    def ensure(self, health, quit_status=202):
+        started = mock.Mock()
+        started.poll.return_value = None
+        with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                mock.patch.object(cs, "server_health", side_effect=health), \
+                mock.patch.object(cs, "request", return_value=(quit_status, b"")) as request, \
+                mock.patch.object(cs.shutil, "which", return_value="/usr/bin/uv"), \
+                mock.patch.object(cs.subprocess, "Popen", return_value=started) as popen, \
+                mock.patch.object(cs.time, "sleep"), \
+                mock.patch.object(cs, "log_error") as logged:
+            result = cs.ensure_server(self.data)
+        return result, request, popen, logged
+
+    def test_same_or_newer_server_is_used_as_it_is(self):
+        for health in (self.NEW, {"ok": True, "version": "0.6.0"}):
+            result, request, popen, _ = self.ensure([health])
+            self.assertEqual(result, health)
+            request.assert_not_called()
+            popen.assert_not_called()
+
+    def test_older_server_is_asked_to_quit_then_replaced(self):
+        # outside the lock, inside it, gone twice after /quit, then the new server answers
+        result, request, popen, _ = self.ensure([self.OLD, self.OLD, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        request.assert_called_once_with(self.data, "POST", "/quit")
+        popen.assert_called_once()
+
+    def test_a_person_waiting_is_told_and_an_old_overrun_marker_is_cleared(self):
+        marker = self.data / "retire-overran"
+        marker.touch()
+        os.utime(marker, (0, 0))  # an overrun long ago: no longer skips the wait
+        stderr = io.StringIO()
+        stderr.isatty = lambda: True  # say or setup in a terminal
+        with mock.patch.object(cs.sys, "stderr", stderr):
+            result, _, _, _ = self.ensure([self.OLD, self.OLD, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        self.assertIn("waiting for the old voice server", stderr.getvalue())
+        self.assertFalse(marker.exists())
+
+    def test_one_slow_health_check_is_not_gone(self):
+        # a miss, then the old server answers again, then it has really gone
+        result, _, popen, _ = self.ensure([self.OLD, self.OLD, None, self.OLD, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        popen.assert_called_once()
+
+    def test_quit_that_cannot_be_sent_uses_the_old_server(self):
+        started = mock.Mock()
+        with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                mock.patch.object(cs, "server_health", side_effect=[self.OLD, self.OLD]), \
+                mock.patch.object(cs, "request", side_effect=ConnectionRefusedError), \
+                mock.patch.object(cs.shutil, "which", return_value="/usr/bin/uv"), \
+                mock.patch.object(cs.subprocess, "Popen", return_value=started) as popen:
+            self.assertEqual(cs.ensure_server(self.data), self.OLD)
+        popen.assert_not_called()
+
+    def test_server_already_quitting_is_waited_for_without_a_second_quit(self):
+        quitting = {"ok": True, "version": "0.5.0", "quitting": True}  # a newer client asked
+        result, request, popen, _ = self.ensure([quitting, quitting, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        request.assert_not_called()
+        popen.assert_called_once()
+
+    def test_no_uv_keeps_using_the_old_server(self):
+        with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                mock.patch.object(cs, "server_health", return_value=self.OLD), \
+                mock.patch.object(cs.shutil, "which", return_value=None):
+            self.assertEqual(cs.ensure_server(self.data), self.OLD)
+        with mock.patch.object(cs, "server_health", return_value=None), \
+                mock.patch.object(cs.shutil, "which", return_value=None), \
+                self.assertRaises(RuntimeError):
+            cs.ensure_server(self.data)
+
+    def test_after_an_overrun_queued_workers_do_not_wait_again(self):
+        (self.data / "retire-overran").touch()
+        result, request, popen, logged = self.ensure([self.OLD, self.OLD])
+        self.assertEqual(result, self.OLD)
+        request.assert_called_once()  # /quit is still asked, harmlessly
+        popen.assert_not_called()
+        logged.assert_not_called()
+
+    def test_speech_refused_twice_is_logged(self):
+        with mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch.object(cs, "request", return_value=(503, b"")) as request, \
+                mock.patch.object(cs, "log_error") as logged:
+            cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1")
+        self.assertEqual((ensure.call_count, request.call_count), (2, 2))
+        self.assertIn("speech dropped", logged.call_args.args[1])
+
+    def test_speech_refused_once_is_sent_again_to_the_new_server(self):
+        # the server began quitting after the health check; ensure_server then waits for it
+        with mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch.object(cs, "request", side_effect=[(503, b""), (202, b"")]) as request, \
+                mock.patch.object(cs, "log_error") as logged:
+            cs.send_to_server(self.data, "hi", {"voice": "v", "speed": 1.0}, "s1", at=7.0)
+        self.assertEqual(ensure.call_count, 2)
+        self.assertEqual(request.call_args_list[0], request.call_args_list[1])  # same body, same "at"
+        logged.assert_not_called()
+
+    def test_server_from_before_quit_existed_is_used_at_once(self):
+        old = {"ok": True}
+        result, request, popen, _ = self.ensure([old, old], quit_status=400)
+        self.assertEqual(result, old)
+        request.assert_called_once()
+        popen.assert_not_called()
+
+    def test_drain_past_the_wait_is_logged_and_nothing_starts(self):
+        with mock.patch.object(cs, "RETIRE_WAIT", 0):
+            result, _, popen, logged = self.ensure([self.OLD, self.OLD])
+        self.assertEqual(result, self.OLD)
+        popen.assert_not_called()
+        self.assertIn("still draining", logged.call_args.args[1])
+        self.assertTrue((self.data / "retire-overran").exists())
+
+    def test_say_out_refused_once_is_sent_again_to_the_new_server(self):
+        args = argparse.Namespace(data_dir=str(self.data), out=str(self.data / "x.wav"), text=["hi"],
+                                  voice=None, speed=None, summarize=None, summary_model=None)
+        with mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch.object(cs, "request", side_effect=[(503, b"quitting"), (200, b"RIFF")]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            cs.cmd_say(args)
+        self.assertEqual(ensure.call_count, 2)
+        self.assertEqual((self.data / "x.wav").read_bytes(), b"RIFF")
+
+    def test_status_shows_both_versions_and_quitting(self):
+        args = argparse.Namespace(data_dir=str(self.data))
+        for health, expected in (({**NEW_HEALTH, "quitting": True}, "0.5.0 (quitting); this client 0.5.0"),
+                                 ({"ok": True}, "unknown (older than 0.5.0); this client 0.5.0")):
+            out = io.StringIO()
+            with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                    mock.patch.object(cs, "server_health", return_value=health), \
+                    contextlib.redirect_stdout(out):
+                cs.cmd_status(args)
+            self.assertIn(f"version:     {expected}", out.getvalue())
+
+    def test_another_worker_replaced_it_while_this_one_waited_for_the_lock(self):
+        result, request, popen, _ = self.ensure([self.OLD, self.NEW])
+        self.assertEqual(result, self.NEW)
+        request.assert_not_called()
+        popen.assert_not_called()
 
 
 if __name__ == "__main__":

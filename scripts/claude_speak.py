@@ -39,6 +39,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SERVER_SCRIPT = ROOT / "scripts" / "server.py"
+# How long a newer client waits for an older server to finish its speech and exit.
+RETIRE_WAIT = 120
 
 # Replies at or under this length are spoken as-is, without a summary.
 SUMMARY_THRESHOLD = 280
@@ -491,26 +493,96 @@ def server_health(data: Path) -> dict | None:
         return None
 
 
+def plugin_version(manifest: Path = ROOT / ".claude-plugin" / "plugin.json") -> str:
+    """Twin of server.plugin_version: the server runs standalone under uv and imports nothing from here."""
+    try:
+        return str(json.loads(manifest.read_text()).get("version") or "")
+    except (OSError, ValueError, AttributeError):
+        return ""
+
+
+VERSION = plugin_version()
+
+
+def _version_tuple(version) -> tuple:
+    """Turn "0.10.2" into (0, 10, 2); missing or unparseable is (), below every real version."""
+    try:
+        return tuple(int(part) for part in str(version).split("."))
+    except ValueError:
+        return ()
+
+
+def _stale(health: dict) -> bool:
+    """True only for a server older than this client: an older client keeps using a newer
+    server, else two sessions on two versions would restart each other's server forever.
+    An unreadable client version never restarts anything."""
+    mine = _version_tuple(VERSION)
+    return bool(mine) and _version_tuple(health.get("version") or "") < mine
+
+
+def _replaceable(health: dict) -> bool:
+    """Older than this client, or already quitting because another client asked: either way,
+    wait for it to go rather than send it speech it would refuse."""
+    return _stale(health) or bool(health.get("quitting"))
+
+
+def _retire(data: Path, health: dict) -> dict | None:
+    """Ask an older server to exit once its speech is done and wait for it to go: None when it
+    has gone. A server from before /quit existed refuses it and is used as it is."""
+    if not health.get("quitting"):
+        try:
+            status, _ = request(data, "POST", "/quit")
+        except (OSError, http.client.HTTPException):
+            status = 0
+        if status != 202:
+            return health
+    overran = data / "retire-overran"
+    try:
+        if time.time() - overran.stat().st_mtime < RETIRE_WAIT:
+            return health  # a drain just overran: don't make every queued worker wait again
+    except OSError:
+        pass
+    if sys.stderr.isatty():  # say, setup: a person is waiting; hooks and workers have no terminal
+        print("claude-speak: waiting for the old voice server to finish speaking...", file=sys.stderr)
+    deadline = time.time() + RETIRE_WAIT
+    misses = 0
+    while time.time() < deadline:
+        time.sleep(0.5)
+        misses = 0 if server_health(data) else misses + 1
+        if misses >= 2:  # one slow /health on a loaded machine is not "gone"
+            overran.unlink(missing_ok=True)
+            return None
+    overran.touch()
+    log_error(data, f"old server {health.get('version') or '(no version)'} still draining after "
+                    f"{RETIRE_WAIT} s; speech dropped. Run `claude-speak stop` to end it.")
+    return health
+
+
 def ensure_server(data: Path, wait: float = 900) -> dict:
-    """Start the TTS server if needed. The first start downloads the model."""
+    """Start the TTS server if needed, replacing one older than this client.
+    The first start downloads the model."""
     health = server_health(data)
-    if health:
+    if health and not _replaceable(health):
         return health
     uv = shutil.which("uv")
     if not uv:
+        if health:
+            return health  # can't start a newer one, so the old one speaks (a quitting one refuses: logged)
         raise RuntimeError("uv is required to run the Kokoro server: https://docs.astral.sh/uv/")
 
     with open(data / "server.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         health = server_health(data)
+        if health and _replaceable(health):
+            health = _retire(data, health)
         if health:
             return health
-        log = open(data / "server.log", "ab")
-        server = subprocess.Popen(
-            [uv, "run", "--quiet", "--script", str(SERVER_SCRIPT),
-             "--data-dir", str(data), "--socket", str(socket_path(data))],
-            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
-        )
+        with open(data / "server.log", "ab") as log:  # the server keeps its own copy of the fd
+            server = subprocess.Popen(
+                [uv, "run", "--quiet", "--script", str(SERVER_SCRIPT),
+                 "--data-dir", str(data), "--socket", str(socket_path(data))],
+                stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
+            )
         deadline = time.time() + wait
         while time.time() < deadline and server.poll() is None:
             time.sleep(0.5)
@@ -525,11 +597,15 @@ def send_to_server(data: Path, text: str, settings: dict, session: str = "", lab
     """Queue speech. session lets a newer reply replace an older one; label names
     the project aloud when other sessions are speaking too; priority (urgent, normal,
     low) picks the lane, and at (the hook's time) lets the server drop a stale status line."""
-    ensure_server(data)
-    request(data, "POST", "/speak",
-            {"text": text, "voice": settings["voice"], "speed": settings["speed"],
-             "session": session, "label": label, "priority": priority,
-             "at": time.time() if at is None else at})
+    body = {"text": text, "voice": settings["voice"], "speed": settings["speed"],
+            "session": session, "label": label, "priority": priority,
+            "at": time.time() if at is None else at}
+    for _ in range(2):  # 503: the server began quitting since the health check; the retry waits for it
+        ensure_server(data)
+        status, _ = request(data, "POST", "/speak", body)
+        if status != 503:
+            return
+    log_error(data, "the voice server is quitting; speech dropped")
 
 
 def send_cue(mood: str, gesture: str) -> None:
@@ -834,10 +910,13 @@ def cmd_say(args) -> None:
     settings = _skill_settings(args, data)
     text = speakable(" ".join(args.text))
     if args.out:
-        ensure_server(data)
-        status, body = request(data, "POST", "/synth",
-                               {"text": text, "voice": settings["voice"], "speed": settings["speed"]},
-                               timeout=300)
+        for _ in range(2):  # 503: the server began quitting; the retry waits for the new one
+            ensure_server(data)
+            status, body = request(data, "POST", "/synth",
+                                   {"text": text, "voice": settings["voice"], "speed": settings["speed"]},
+                                   timeout=300)
+            if status != 503:
+                break
         if status != 200:
             sys.exit(f"claude-speak: synthesis failed: {body.decode(errors='replace')}")
         Path(args.out).write_bytes(body)
@@ -873,6 +952,8 @@ def cmd_status(args) -> None:
     print(f"settings:    {_describe(settings)}")
     print(f"server:      {'running' if health else 'not running'}")
     if health:
+        print(f"version:     {health.get('version') or 'unknown (older than 0.5.0)'}"
+              f"{' (quitting)' if health.get('quitting') else ''}; this client {VERSION or 'unknown'}")
         print(f"model:       {health.get('model')}")
         print(f"player:      {health.get('player')}")
         print(f"voices:      {len(health.get('voices', []))} available")

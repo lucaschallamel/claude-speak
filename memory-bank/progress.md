@@ -1,6 +1,6 @@
 # Progress
 
-**Last Updated**: 2026-11-16
+**Last Updated**: 2026-11-20
 
 **Purpose**: what works, what is left, and the history. Details per story are in
 [docs/roadmap/backlog/](../docs/roadmap/backlog/).
@@ -12,7 +12,10 @@
 - Released in v0.4.0 (2026-11-15): barge-in on dictation (#2), hush on new prompt (#3), instant
   replay and hotkeys (#4), priority lanes across sessions (#5, PR #26). Installed on omarchy; the
   laptops need the update block.
-- 112 unit tests (9 need numpy: CI runs them on the 3.13 jobs, the 3.10 jobs skip them), CI on
+- On branch `feature/US-030-stale-server-restart` (S0-S8 done, PR at S10): a plugin update takes
+  effect on the next utterance. The old server drains and exits, then the new one starts; only an
+  older server is replaced. Reaches installs with 0.5.0.
+- 142 unit tests (9 need numpy: CI runs them on the 3.13 jobs, the 3.10 jobs skip them), CI on
   Linux and macOS.
 
 ## Milestones
@@ -32,6 +35,12 @@
   status line can pass 2.5 s (Kokoro synthesis slows); met on a quiet machine (US-005 decision 23).
 
 ## Decision log
+
+- 2026-11-19/20 (US-030): replace only an older server (newer wins); drain, then refuse with 503,
+  with one retry through `ensure_server()`; 120 s client wait; 100 s server drain cap; no
+  automatic kill of 0.4.x servers, so the 0.5.0 update block keeps `pkill` once (Lucas). Every
+  S4, S5, S7 and ponytail finding mitigated at Lucas's request. Details are in the story file and
+  on issue #30.
 
 - 2026-11-14 (US-004): replay restarts the speech playing now rather than an older clip; a
   cancelled job stops waiting for synthesis in flight (rewrites upstream `_run`).
@@ -54,3 +63,4 @@
 - 2026-11-14: COPPER harness enabled (PR #22); US-004 delivered through the full pipeline (PR #23).
 - 2026-11-14: trust-boundary list and workflow decisions on main (PR #25).
 - 2026-11-14/15: US-005 priority lanes through S0-S8 on its branch.
+- 2026-11-19/20: US-030 stale-server restart through S0-S8 on its branch (Orca worktree).
