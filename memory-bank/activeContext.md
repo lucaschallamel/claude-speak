@@ -13,7 +13,7 @@ Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16
 
 ## Session 2026-11-19/20: US-030 , restart a stale server after a plugin update
 
-- **Focus**: third story through the full `/cu:pipe` (standard profile), S0-S8 so far, in the
+- **Focus**: third story through the full `/cu:pipe` (standard profile), S0-S10, merged as PR #40 (5eaabfa), in the
   Orca worktree `us-030-stale-server-restart`. Three fresh reviews (S4, S5, S7), one ponytail
   review, and a real-hardware run with scratch plugin copies at five versions.
 - **Delivered**: both processes read `version` from `plugin.json`, and `/health` reports
@@ -32,8 +32,8 @@ Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16
 
 ## Next steps
 
-- [/] US-030: S9 close and S10 PR next; the 0.5.0 release bumps `plugin.json` and keeps `pkill`
-      once in its update block, then `claude-speak status` across a real 0.5.0 to 0.5.x update.
+- [ ] 0.5.0 release (end of milestone 3): bump `plugin.json`, keep `pkill` once in the update
+      block for the 0.4.x server, then `claude-speak status` across a real 0.5.0 to 0.5.x update.
 - [ ] Then US-031 (lightweight profile: test only), then US-006 (measure the Notification delay
       at S1).
 - [ ] Laptops: Lucas runs the 0.4.0 update block on each when he is on it.
