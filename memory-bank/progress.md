@@ -12,7 +12,7 @@
 - Released in v0.4.0 (2026-11-15): barge-in on dictation (#2), hush on new prompt (#3), instant
   replay and hotkeys (#4), priority lanes across sessions (#5, PR #26). Installed on omarchy; the
   laptops need the update block.
-- On branch `feature/US-030-stale-server-restart` (S0-S8 done, PR at S10): a plugin update takes
+- Merged to main (US-030, PR #40, 2026-11-20): a plugin update takes
   effect on the next utterance. The old server drains and exits, then the new one starts; only an
   older server is replaced. Reaches installs with 0.5.0.
 - 142 unit tests (9 need numpy: CI runs them on the 3.13 jobs, the 3.10 jobs skip them), CI on
@@ -63,4 +63,4 @@
 - 2026-11-14: COPPER harness enabled (PR #22); US-004 delivered through the full pipeline (PR #23).
 - 2026-11-14: trust-boundary list and workflow decisions on main (PR #25).
 - 2026-11-14/15: US-005 priority lanes through S0-S8 on its branch.
-- 2026-11-19/20: US-030 stale-server restart through S0-S8 on its branch (Orca worktree).
+- 2026-11-19/20: US-030 stale-server restart delivered through the full pipeline (PR #40, 5eaabfa).

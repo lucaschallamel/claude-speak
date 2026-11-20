@@ -27,7 +27,7 @@ Never talk over Lucas. Shipped as v0.4.0 (2026-11-15).
 
 Say what matters, when it matters, and keep the plumbing honest.
 
-- [ ] [US-030](roadmap/backlog/US-030-restart-a-stale-server-after-a.md) ([#30](https://github.com/lucaschallamel/claude-speak/issues/30)): Restart a stale server after a plugin update
+- [x] [US-030](roadmap/backlog/US-030-restart-a-stale-server-after-a.md) ([#30](https://github.com/lucaschallamel/claude-speak/issues/30)): Restart a stale server after a plugin update
 - [ ] [US-031](roadmap/backlog/US-031-settings-drift-test.md) ([#31](https://github.com/lucaschallamel/claude-speak/issues/31)): Settings drift test
 - [ ] [US-006](roadmap/backlog/US-006-speak-permission-prompts-and-alert-the.md) ([#6](https://github.com/lucaschallamel/claude-speak/issues/6)): Speak permission prompts and alert the avatar
 - [ ] [US-009](roadmap/backlog/US-009-verbosity-levels-and-skipping-trivial-replies.md) ([#9](https://github.com/lucaschallamel/claude-speak/issues/9)): Verbosity levels and skipping trivial replies

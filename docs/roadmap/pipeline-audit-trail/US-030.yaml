@@ -13,10 +13,10 @@ change_surface:
   security_sensitive: false
   compliance_sensitive: false
 current_stage: S10_MERGE
-status: active
+status: completed
 status_reason: ''
 initiated_at: '2026-11-19T17:36:42Z'
-completed_at: ''
+completed_at: '2026-11-20T06:51:00Z'
 stages:
   S0_SELECT:
     status: completed
@@ -126,7 +126,7 @@ stages:
   S7_CRITICAL_REVIEW:
     status: completed
     completed_at: '2026-11-20T08:30:00Z'
-    reviewed_commit: 'ef0b279'
+    reviewed_commit: 'ef0b2790d7aa659af80e5f397b084c045954d253'
     reviewers:
       - 'Fresh reviewer: general-purpose subagent, read-only; inputs: commands/dod-verify.md (DoD Level 1 from framework-authoring/resources/definition-of-done.md), fresh-context-review.md, story, git diff main...ef0b279, pipeline_validator.py status output, the pipeline YAML and artefacts (author claims only), CLAUDE.md; Verdict dictated: no'
       - 'Author pass after the fresh report: confirmed F1-F3; HTTP /synth 503 already tested since S5; found A1 (pre-existing server.log handle leak)'
@@ -163,10 +163,34 @@ stages:
       - 'user-story-validator: 24/24 pass, exit 0'
       - 'Close docs (S8 capture and S9) committed in the S9 commit below and pushed'
     commit: '718294f'
-  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S10_MERGE:
+    status: completed
+    completed_at: '2026-11-20T06:51:00Z'
+    pr_head: 'e278c35a20afdb6d9151b1603a06f91464b34675'
+    pr_url: 'https://github.com/lucaschallamel/claude-speak/pull/40'
+    merge_approval:
+      quote: 'Approved, merge the PR, go back to main, close cleanly this story, and advise about the best candidate to pick up next'
+      at: '2026-11-20T06:49:00Z'
+      head: 'e278c35a20afdb6d9151b1603a06f91464b34675'
+    evidence:
+      - 'Battery on e278c35 before PR creation: 142 passed, 0 failed, 0 skipped (numpy installed); bare mode 142 run, 9 skipped; ruff 0.15.4 defaults and CI select clean; py_compile ok; story validator 24/24; pipeline audit no errors; exit 0'
+      - 'PR #40 created with /cu:mr-create on Lucas''s approval (gates 1-6 pass; secret scan: no keys or tokens, only the co-author noreply address and the intended "Closes #30"; private repository not linked)'
+      - 'CI on PR #40 at e278c35: unittest ubuntu/macos x 3.10/3.13, 4/4 pass'
+      - 'Before merge: PR head e278c35 = approved head; 0 behind origin/main; MERGEABLE CLEAN'
+      - 'Merged on the platform: gh pr merge 40 --squash --match-head-commit e278c35 (repository convention) -> 5eaabfa951b4617cf43aab9d3b535cc2bbb9993f at 2026-11-20T06:51:00Z; issue #30 closed by the merge'
+      - 'commit_count: 11'
+      - 'Changed after review: CLAUDE.md, README.md, docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md, docs/roadmap/backlog/US-030-restart-a-stale-server-after-a.md, docs/roadmap/pipeline-audit-trail/US-030.yaml, docs/roadmap/pipeline-audit-trail/artifacts/US-030-s7-review.md, memory-bank/activeContext.md, memory-bank/archive/activeContext-archive.md, memory-bank/progress.md, memory-bank/systemPatterns.md, memory-bank/techContext.md, scripts/claude_speak.py, scripts/server.py, tests/test_client.py'
+      - 'Those changes came from: S7 fixes f101934 (say --out 503 retry, server.log handle closed, server docstring, 2 tests, story spec; after the S7 review of ef0b279), then S8-S9 capture and bookkeeping; covered by the battery and CI on e278c35, not by a further fresh review'
+      - 'Ancestry check unverified: the squash merge leaves the reviewed commits off main, so pipeline_validator verify S10_MERGE ancestry is expected to fail; recorded here, pr_head not changed (Rule 07 Control 1)'
+      - 'Post-merge close: chore/US-030-close from main 5eaabfa: story Done, card DONE, ROADMAP ticked, pipeline completed; its own PR needs a second approval (TD-205); the in progress label is removed when it merges'
+    commit: '5eaabfa'
 closure_checks:
-  backlog_status: { status: pending, reason: 'Story stays In Progress until the merge; Done at the post-merge close (TD-173)' }
-  board_status: { status: pending, reason: 'Card stays in DOING until the merge; DONE at the post-merge close (TD-173)' }
+  backlog_status:
+    status: pass
+    reason: 'Story status Done (post-merge close, TD-173)'
+  board_status:
+    status: pass
+    reason: 'KANBAN card DOING -> DONE; ROADMAP ticked'
   dev_journal:
     status: pass
     reason: 'docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md'
@@ -179,8 +203,12 @@ closure_checks:
   commit_evidence:
     status: pass
     reason: 'Checkpoint commits S0+S1 b1252e8, S3 f92e345, S4 29aa4f1 and 7891888 (ponytail pass), S5 3ccf298, S6 ef0b279, S7 f101934, S8+S9 close docs 718294f; every commit pushed after it'
-  pr_readiness: { status: pending, reason: '' }
-  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  pr_readiness:
+    status: pass
+    reason: 'Branch clean, 11 commits ahead, 0 behind, pushed, battery exit 0, CI 4/4'
+  pr_creation:
+    status: pass
+    reason: 'PR #40 created at S10 after all close docs were committed and pushed'
   deliverables_resolved:
     status: pass
     reason: 'Code, tests and docs delivered; every S4, ponytail, S5 and S7 finding mitigated or accepted with its reason; the 0.5.0 version bump and the real-update status check are release steps in the story Release section'
@@ -242,6 +270,12 @@ verified_claims:
     exit_code: 0
     scope: 'project'
     category: 'validator'
-pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+pr_readiness:
+  status: pass
+  branch: 'feature/US-030-stale-server-restart'
+  branch_clean: true
+  ready_for_pr: true
+  evidence:
+    - 'git status --porcelain empty at e278c35; 0 behind origin/main; up to date with origin'
 bypasses: []
 notes: ''

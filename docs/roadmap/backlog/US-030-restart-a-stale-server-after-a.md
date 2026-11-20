@@ -5,7 +5,7 @@ title: 'Restart a stale server after a plugin update'
 epic: '3 Smarter speech'
 priority: 'High'
 story_points: 3
-status: 'In Progress'
+status: 'Done'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-16'
@@ -15,6 +15,7 @@ github_issue: 30
 
 > [!note]- Progress updates
 >
+> - **2026-11-20**: [S10_MERGE] PR #40 squash-merged as 5eaabfa on Lucas's approval (CI 4/4 green on e278c35); issue #30 closed; story Done, card DONE, pipeline completed.
 > - **2026-11-20**: [S9_CLOSE] AC1-AC4 ticked as met (AC1 and AC2 on real hardware at S6, AC3 by 142 unit tests, AC4 in tests and on hardware); close docs committed; status stays In Progress until the merge.
 > - **2026-11-20**: [S8_CAPTURE] Dev journal written; memory bank updated (US-005 session block archived); README restart bullet reworded so it no longer contradicts the 100 s cap.
 > - **2026-11-20**: [S7_CRITICAL_REVIEW] Fresh DoD review WARN (all ACs pass, no FAIL), 6 findings; Lucas asked for all to be mitigated: story spec brought in line (AC2 drain cap, 503 list, decision 3), server docstring, say --out retries a 503, status and retry tests, release step for a real update check; 142 tests pass.
