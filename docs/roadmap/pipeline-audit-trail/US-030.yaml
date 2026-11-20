@@ -140,7 +140,7 @@ stages:
       - 'F4: accepted at S5 (finding 4); F5: release step added to the story (claude-speak status across a real update); F6: committed here'
       - 'A1: client closes its copy of the server.log handle after Popen; 0 ResourceWarnings'
       - 'After fixes: 142 tests OK; 142 run, 9 skipped with numpy blocked; timing classes 5 runs OK; ruff 0.15.4 defaults and CI select clean'
-    commit: 'S7 commit'
+    commit: 'f101934'
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
