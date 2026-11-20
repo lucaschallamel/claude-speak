@@ -13,6 +13,8 @@
 ## Tests and CI
 
 - `python3 -m unittest discover tests`: no model, audio or network; server deps stubbed.
+- Showing a test catches what it claims (US-031): copy `scripts/`, `tests/`, `skills/` and
+  `.claude-plugin/` to a scratch dir, mutate there, run the test class; the tree stays clean.
   Tests that drive `Speaker._run` for real need numpy (`skipIf` on the stub). Since US-005, CI
   installs numpy on the Python 3.13 jobs, which run them; the 3.10 jobs stay bare and skip them.
   They also run on any machine with numpy (omarchy has it).

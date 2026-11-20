@@ -20,6 +20,8 @@ github_issue: 31
 > - **2026-11-20**: [S1_KICKOFF] Scope refined: the skill check maps keys to `config` flags, default values compared too (Lucas); AC1 widened; points stay 1.
 > - **2026-11-20**: [S3_EXECUTE] `SettingsDriftTest` added (4 tests, 146 in all, OK); six mutations each fail the expected test; CLAUDE.md names the test.
 > - **2026-11-20**: [S4-S6] Fresh reviews S4 and S5 PASS, every finding mitigated (skill check limited to `config` lines, real `config` parser checked through `--help`); quality gates all pass (146 tests, Python 3.10, ruff, validators).
+> - **2026-11-20**: [S7_CRITICAL_REVIEW] Fresh DoD review PASS; the AC1 WARN (a flag only in the skill passed) fixed with a skill-to-parser check; 147 tests.
+> - **2026-11-20**: [S8_CAPTURE] Dev journal, memory bank and README review captured.
 
 # US-031: Settings drift test
 

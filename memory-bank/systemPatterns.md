@@ -61,7 +61,9 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
 
 - A dependency in the client.
 - Speaking our own skill replies (keep the `🔊`, `claude-speak:` and `No change.` prefixes).
-- Settings outside the precedence chain (`load_settings`).
+- Settings outside the precedence chain (`load_settings`), or added to only some of its places:
+  `SettingsDriftTest` (US-031) must pass. `config` parses with `parse_known_args`, so a skill flag
+  the parser lacks is dropped silently; the test checks both directions.
 - Large speech chunks: Kokoro synthesis can't be interrupted, so preempting speech waits for the
   chunk in flight and, over a reply, for the chunk playing (US-005: 250-char chunks meant a 15 s
   wait). Keep `CHUNK_CHARS` small.

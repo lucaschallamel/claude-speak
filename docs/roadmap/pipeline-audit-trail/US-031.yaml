@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S8_CAPTURE
+current_stage: S9_CLOSE
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -129,16 +129,28 @@ stages:
       - 'F3 Info S0 and S2 committed with S1 and S3: accepted, recorded in those stages'
       - 'After fixes: 147 tests OK; Python 3.10: OK (9 skipped); ruff@0.15.4 defaults and CI selection clean; mutations M1-M12 as expected (M11 skill-only flag now FAIL, M12 skill+parser non-setting flag passes by design), M0 control OK'
       - 'Change after S7 is test and docs only, so the extra fresh review for runtime changes after S7 (decision of 2026-11-20) does not apply'
+    commit: '71c1e3d'
+  S8_CAPTURE:
+    status: completed
+    completed_at: '2026-11-20T09:23:39Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:dev-journal, /cu:memory-update, /cu:readme-update, in that order'
+      - 'Lucas: README decision via AskUserQuestion (no change, the recommended option)'
+    evidence:
+      - '/cu:dev-journal: docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md (test -f: exists)'
+      - '/cu:memory-update: all six files reviewed; activeContext.md (US-031 session block, next steps), progress.md (works, decision log, history), systemPatterns.md (settings anti-pattern names the test and parse_known_args), techContext.md (mutation-in-scratch method) updated; productContext.md and projectbrief.md unchanged (no scope or positioning change)'
+      - 'prune-memory-bank.py: US-030 session block rolled to archive/activeContext-archive.md (appended before removal); --check exit 0 (budget table not readable here, sizes not checked)'
+      - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line)'
+      - '/cu:readme-update: 3 READMEs reviewed (README.md, docs/dev-journal/README.md, docs/roadmap/README.md), none missing; nothing to update (Lucas: no change; the settings rule lives in CLAUDE.md, zero upstream README diff)'
     commit: ''
-  S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
 closure_checks:
   backlog_status: { status: pending, reason: '' }
   board_status: { status: pending, reason: '' }
-  dev_journal: { status: pending, reason: '' }
-  memory_bank: { status: pending, reason: '' }
-  readme_review: { status: pending, reason: '' }
+  dev_journal: { status: pass, reason: 'docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md' }
+  memory_bank: { status: pass, reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-030 block archived; consistency PASS with COPPER_DOCS_ROOT=.' }
+  readme_review: { status: pass, reason: '/cu:readme-update ran: 3 READMEs reviewed, nothing to update (Lucas)' }
   commit_evidence: { status: pending, reason: '' }
   pr_readiness: { status: pending, reason: '' }
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
