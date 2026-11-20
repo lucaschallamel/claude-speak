@@ -1,0 +1,75 @@
+schema_version: 2
+story_id: US-031
+story_path: docs/roadmap/backlog/US-031-settings-drift-test.md
+github_issue: 'lucaschallamel/claude-speak#31'
+feature_branch: lucaschallamel/US-031-settings-drift-test
+worktree: ~/orca/workspaces/claude-speak/US-031-settings-drift-test
+review_profile: lightweight
+change_surface:
+  code: false
+  docs: true
+  tests: true
+  architecture: false
+  security_sensitive: false
+  compliance_sensitive: false
+current_stage: S2_PLAN
+status: active
+status_reason: ''
+initiated_at: '2026-11-20T07:51:44Z'
+completed_at: ''
+stages:
+  S0_SELECT:
+    status: completed
+    completed_at: '2026-11-20T07:51:44Z'
+    evidence:
+      - 'Orca worktree US-031-settings-drift-test on branch lucaschallamel/US-031-settings-drift-test, cut from main 88bc8dd (Orca branch name kept; it carries the story ID)'
+      - 'Story status Draft -> In Progress; progress entry added; Kanban card TODO -> DOING'
+      - 'Label in progress added to issue #31 (standing decision of 2026-11-20)'
+      - 'pipeline_validator audit at init: passed (US-004, US-005, US-030), exit 0'
+      - 'Review profile lightweight (decision of 2026-11-20: test-only story, 1 point)'
+    commit: 'S0 changes committed with S1'
+  S1_KICKOFF:
+    status: completed
+    completed_at: '2026-11-20T08:03:55Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:story-kickoff'
+      - 'Lucas: two decisions via AskUserQuestion (map key to flag; compare default values), both the recommended options'
+    evidence:
+      - 'Issue #31 re-read 2026-11-20: no comments before kickoff'
+      - 'Kickoff artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-031-s1-kickoff.md'
+      - 'Challenge log: 4 entries (lightweight minimum 2); all resolved'
+      - 'Story file updated: AC1 widened to default values; technical requirements rewritten (key-to-flag map); decisions section added'
+      - 'Story points re-estimated: stay at 1'
+      - 'Decisions posted on issue #31'
+    commit: ''
+  S2_PLAN: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+closure_checks:
+  backlog_status: { status: pending, reason: '' }
+  board_status: { status: pending, reason: '' }
+  dev_journal: { status: pending, reason: '' }
+  memory_bank: { status: pending, reason: '' }
+  readme_review: { status: pending, reason: '' }
+  commit_evidence: { status: pending, reason: '' }
+  pr_readiness: { status: pending, reason: '' }
+  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  deliverables_resolved: { status: pending, reason: '' }
+  dod_verified: { status: pending, reason: '' }
+quality_gates:
+  lint: { status: pending, evidence: '' }
+  unit_tests: { status: pending, evidence: '' }
+  integration_tests: { status: pending, evidence: '' }
+  functional_tests: { status: pending, evidence: '' }
+  docs_quality: { status: pending, evidence: '' }
+  validators: { status: pending, evidence: '' }
+verified_claims: []
+pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+bypasses: []
+notes: ''

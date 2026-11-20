@@ -11,6 +11,11 @@ Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16
 "Smarter speech" comes next (release 0.5.0), then milestone 3 "Characters"; order in
 `docs/ROADMAP.md`. Milestone 3 Smarter speech started with US-030 (2026-11-19/20).
 
+## Currently working on
+
+US-031 settings drift test (`/cu:pipe`, lightweight profile), Orca worktree
+`US-031-settings-drift-test`, started 2026-11-20.
+
 ## Session 2026-11-19/20: US-030 , restart a stale server after a plugin update
 
 - **Focus**: third story through the full `/cu:pipe` (standard profile), S0-S10, merged as PR #40 (5eaabfa), in the

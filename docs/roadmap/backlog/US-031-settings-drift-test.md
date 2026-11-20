@@ -5,17 +5,19 @@ title: 'Settings drift test'
 epic: '3 Smarter speech'
 priority: 'High'
 story_points: 1
-status: 'Draft'
+status: 'In Progress'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-16'
-last_modified: '2026-11-16'
+last_modified: '2026-11-20'
 github_issue: 31
 ---
 
 > [!note]- Progress updates
 >
 > - **2026-11-16**: Story file created from GitHub issue #31, filed by the backlog review of 2026-11-16; status Draft.
+> - **2026-11-20**: [S0_SELECT] Story selected, pipeline initiated on branch `lucaschallamel/US-031-settings-drift-test` (Orca worktree); status In Progress, card DOING, lightweight profile.
+> - **2026-11-20**: [S1_KICKOFF] Scope refined: the skill check maps keys to `config` flags, default values compared too (Lucas); AC1 widened; points stay 1.
 
 # US-031: Settings drift test
 
@@ -29,12 +31,22 @@ CLAUDE.md requires every new setting in `DEFAULTS`, `plugin.json` `userConfig`, 
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: The test passes on main and fails when a setting is added to only one of those places.
+- [ ] **AC1**: The test passes on main and fails when a setting is added to only one of those places,
+  or when a default value differs between `DEFAULTS` and `userConfig`.
 
 Effort: XS. Could go upstream: yes.
 
 ## Technical Requirements
 
 - `set(DEFAULTS) == set(userConfig)` (both hold `auto_speak`, `speed`, `summarize`, `summary_model`, `voice` today).
+- Each `DEFAULTS` value equals the `default` of the same key in `userConfig`.
 - `OVERRIDABLE` is a subset of `DEFAULTS`.
-- Every `OVERRIDABLE` key is named in `skills/speak-settings/SKILL.md`.
+- Every `OVERRIDABLE` key's `config` flag appears in `skills/speak-settings/SKILL.md`. The flag is `--` plus the key with dashes, except `auto_speak`, whose flag is `--auto`; the test holds that one exception.
+- One test class in `tests/test_client.py`, stdlib only. No runtime or skill change.
+
+## Decisions (S1, 2026-11-20)
+
+- The skill names `config` flags, not keys, so the test maps key to flag (`auto_speak` -> `--auto`) instead of editing the skill (Lucas).
+- Default values are compared too, not only keys (Lucas).
+- Not covered: the hand-written key lists in `cmd_config` and the per-call flags in `with_voice()`. A key that is deliberately absent from `userConfig` would need an explicit exception, decided in the story that adds it.
+- Points stay at 1.
