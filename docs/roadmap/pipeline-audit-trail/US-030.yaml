@@ -102,7 +102,7 @@ stages:
       - 'User disposition: mitigate all findings ("review, assess, mitigate all issues, findings and risks, if any, with precision and care")'
       - 'Mitigated: 1 waiting notice on a terminal, 2 server drain cap DRAIN_CAP=100 s below RETIRE_WAIT, 3 dev data-dir note in CLAUDE.md, 5 socket removed only if same inode, 7 overrun marker removed on a clean retire, 8 /synth refused once closed and held until written; 4 and 6 accepted with reasons; 9 nothing to do; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s5-review.md'
       - 'After fixes: 140 tests OK (5 new); timing classes 5 runs OK; ruff 29 = main baseline'
-    commit: 'S5 fixes, next commit'
+    commit: '3ccf298 (S5 fixes)'
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
