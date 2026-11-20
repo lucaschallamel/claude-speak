@@ -152,7 +152,7 @@ stages:
       - 'prune-memory-bank.py: rolled the US-005 session block to archive/activeContext-archive.md; the script appended it at the end, so it was moved to the top (newest first), same words verified; --check: PARTIAL (budget table not readable here); sizes measured with tiktoken cl100k_base: 223-1232 tokens per file, all far under budget'
       - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line)'
       - '/cu:readme-update: README.md restart bullet reworded (it said nothing is cut off next to the 100 s cap); docs/roadmap/README.md and docs/dev-journal/README.md generic, unchanged; scripts/, tests/, memory-bank/ have no README by repository convention, none created'
-    commit: 'S8 changes committed with S9'
+    commit: '718294f (with S9)'
   S9_CLOSE:
     status: completed
     completed_at: '2026-11-20T09:20:00Z'
@@ -162,7 +162,7 @@ stages:
       - '/cu:readme-update: ran at S8 (README.md restart bullet reworded); since then only the story file and pipeline record changed, so no README needed changes'
       - 'user-story-validator: 24/24 pass, exit 0'
       - 'Close docs (S8 capture and S9) committed in the S9 commit below and pushed'
-    commit: 'S9 commit'
+    commit: '718294f'
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
 closure_checks:
   backlog_status: { status: pending, reason: 'Story stays In Progress until the merge; Done at the post-merge close (TD-173)' }
@@ -178,7 +178,7 @@ closure_checks:
     reason: 'README.md restart bullet current and reworded; other READMEs in scope generic and unchanged'
   commit_evidence:
     status: pass
-    reason: 'Checkpoint commits S0+S1 b1252e8, S3 f92e345, S4 29aa4f1 and 7891888 (ponytail pass), S5 3ccf298, S6 ef0b279, S7 f101934, S9 close docs; every commit pushed after it'
+    reason: 'Checkpoint commits S0+S1 b1252e8, S3 f92e345, S4 29aa4f1 and 7891888 (ponytail pass), S5 3ccf298, S6 ef0b279, S7 f101934, S8+S9 close docs 718294f; every commit pushed after it'
   pr_readiness: { status: pending, reason: '' }
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
   deliverables_resolved:
