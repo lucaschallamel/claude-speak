@@ -13,7 +13,9 @@
   - At S1, re-read the issue and its comments and update the story file. Re-estimate the story points from what S1 finds, and record the actual effort in the dev journal. The point scale is not yet calibrated: US-005 was rated 3 and took two days.
   - Push the feature branch after every checkpoint commit from S1 onwards; no PR until S10.
   - Squash-merge at S10, and record COPPER's ancestry check, which needs a merge commit, as unverified.
-  - Then open a close PR (`chore/<ID>-close`). It merges only on its own approval from Lucas.
+  - Then open a close PR (`chore/<ID>-close`, cut from the updated main). Lucas's merge approval of the feature PR also covers it, as long as it touches nothing beyond story status, Kanban card, ROADMAP tick, pipeline record and memory-bank status lines, and CI is green. Anything else in it needs a separate yes. Merge with `--match-head-commit` (decided 2026-11-20).
+  - If runtime code changes after S7, one fresh-context reviewer checks just that code diff before S10. Docs-only changes skip it. Reason: the US-030 S7 fixes reached main covered only by tests and CI (decided 2026-11-20).
+  - Server handoff and other real-hardware checks: `tests/manual/` holds runnable scripts; CI does not run them.
 - Measure latency and behaviour on real hardware before calling a story done. Run the worktree's server with its own `CLAUDE_SPEAK_DATA` so the installed plugin is untouched. Unit tests passed while restart latency was 5.3 s.
 - Trust-boundary paths for COPPER S5 are in `docs/roadmap/pipeline-audit-trail/trust-boundary-paths.json`, read from main.
 - Linux/Hyprland-first is fine; never break macOS (CI covers it); document Mac fallback per story.
