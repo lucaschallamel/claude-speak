@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S5_ARCH_SEC_COMP_REVIEW
+current_stage: S6_TEST_QUALITY_VERIFY
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -83,8 +83,26 @@ stages:
       - 'F4 Info stale FLAGS entry: asserts set(FLAGS) <= set(OVERRIDABLE); also asserts a config line exists'
       - 'F5 Info: no action needed'
       - 'After fixes: 146 tests OK; ruff@0.15.4 clean; mutations M1-M9 each fail the expected test (M7 prose-only flag, M8 stale FLAGS, M9 no config line are new), M0 control OK'
+    commit: '081dc78'
+  S5_ARCH_SEC_COMP_REVIEW:
+    status: completed
+    completed_at: '2026-11-20T09:10:25Z'
+    reviewed_commit: '081dc78ba5cf2facbca7f542eedfc38b2f87eef5'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/arch-review.md, fresh-context-review.md, story US-031, git diff main...081dc78ba5cf2facbca7f542eedfc38b2f87eef5, CLAUDE.md, trust-boundary-paths.json (host also injected project rules and auto-memory; no build conversation); read-only, forbidden git commands listed; Verdict dictated: no (it re-checked the trust-boundary claim in the story itself)'
+      - 'Author pass after the fresh report: agreed with all five findings, none added'
+    evidence:
+      - 'Delegated to /cu:arch-review (fresh): PASS, 0 critical, 0 high, 0 medium, 2 low, 3 info; risk register R1-R3, all low impact'
+      - 'no trust boundary touched: test-only change; the diff touches none of scripts/server.py, scripts/claude_speak.py, hooks/hooks.json, bin/claude-speak, and adds no input handling, network, subprocess or secrets'
+      - 'User disposition: mitigate all findings and risks (fix before S6)'
+      - 'F1 Low / R2 hand-written key-to-flag map, CLI rename unseen: test now reads the real config parser through config --help (main() uses parse_known_args, so a missing flag would be dropped silently); no runtime change'
+      - 'F2 Low skill passes the flag, not proof the menu asks for it: accepted as AC scope (S1), no change'
+      - 'F3 Info CLAUDE.md silent on the cmd_config/with_voice gap: sentence now names it and the parser check'
+      - 'F4, F5 Info: no action needed'
+      - 'R1 key left out of OVERRIDABLE: documented in CLAUDE.md and the docstring; R3 deliberate userConfig absence: explicit exception decided by the story that adds it (story Decisions)'
+      - 'Ponytail review nice-to-have: redundant assertTrue(self.user_config) removed'
+      - 'After fixes: 146 tests OK; ruff@0.15.4 clean; mutations M1-M10 each fail the expected test (M3b skill flag without CLI flag, M10 CLI flag renamed are new), M0 control OK'
     commit: ''
-  S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

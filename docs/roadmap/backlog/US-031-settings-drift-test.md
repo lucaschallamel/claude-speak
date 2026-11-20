@@ -43,13 +43,14 @@ Effort: XS. Could go upstream: yes.
 - Each `DEFAULTS` value equals the `default` of the same key in `userConfig`.
 - `OVERRIDABLE` is a subset of `DEFAULTS`.
 - Every `OVERRIDABLE` key's `config` flag appears in `skills/speak-settings/SKILL.md`. The flag is `--` plus the key with dashes, except `auto_speak`, whose flag is `--auto`; the test holds that one exception.
+- Every `OVERRIDABLE` key's flag is accepted by the real `config` parser, read through `config --help` (S5: `main()` uses `parse_known_args`, so a flag the parser lacks would be dropped without an error).
 - One test class in `tests/test_client.py`, stdlib only. No runtime or skill change.
 
 ## Decisions (S1, 2026-11-20)
 
 - The skill names `config` flags, not keys, so the test maps key to flag (`auto_speak` -> `--auto`) instead of editing the skill (Lucas).
 - Default values are compared too, not only keys (Lucas).
-- Not covered: the hand-written key lists in `cmd_config` and the per-call flags in `with_voice()`. A key that is deliberately absent from `userConfig` would need an explicit exception, decided in the story that adds it.
+- Not covered: how `cmd_config` handles each flag (its hand-written key lists) and the per-call flags in `with_voice()`. Since S5 the test does check that `config` accepts each flag. A key that is deliberately absent from `userConfig` would need an explicit exception, decided in the story that adds it.
 - Points stay at 1.
 
 ## Decisions (after S3, 2026-11-20, Lucas)
