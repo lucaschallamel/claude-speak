@@ -33,9 +33,9 @@ methodology: continuous-flow
 
 ## DOING
 
-- [/] [[US-030-restart-a-stale-server-after-a]]
-
 ## DONE
+
+- [x] [[US-030-restart-a-stale-server-after-a]]
 
 - [x] [[US-005-priority-lanes]]
 
