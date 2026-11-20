@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S6_TEST_QUALITY_VERIFY
+current_stage: S7_CRITICAL_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-19T17:36:42Z'
@@ -103,7 +103,26 @@ stages:
       - 'Mitigated: 1 waiting notice on a terminal, 2 server drain cap DRAIN_CAP=100 s below RETIRE_WAIT, 3 dev data-dir note in CLAUDE.md, 5 socket removed only if same inode, 7 overrun marker removed on a clean retire, 8 /synth refused once closed and held until written; 4 and 6 accepted with reasons; 9 nothing to do; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s5-review.md'
       - 'After fixes: 140 tests OK (5 new); timing classes 5 runs OK; ruff 29 = main baseline'
     commit: '3ccf298 (S5 fixes)'
-  S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S6_TEST_QUALITY_VERIFY:
+    status: completed
+    completed_at: '2026-11-20T07:30:00Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate, gates mapped to the project (unittest, ruff@0.15.4 defaults and the CI select, no formatter, story validator, pipeline validator)'
+      - 'Hands-on on real hardware (omarchy, real Kokoro, avatar-play player): scratch plugin copies at 0.4.0 (main), 0.5.0, 0.5.1, 0.5.2 (DRAIN_CAP=4) and 0.5.3 on their own data dir, installed model shared by symlink; scripts s6-setup.sh, s6-run.sh, s6-old.sh in the session scratchpad'
+    evidence:
+      - 'Delegated to /cu:qa-gate: PASS (unit tests, lint, compile, story validator); markdown formatter not applicable'
+      - 'AC1: 0.5.1 client found a 0.5.0 server mid-reply; server.log: quitting 07:24:47, exiting 07:25:08, 0.5.1 listening 07:25:16; the 0.5.1 utterance spoken by the new server (say returned after 29 s: 21 s drain + 8 s model load)'
+      - 'AC2: the old server finished its whole 21 s reply before exiting (quit 07:24:47 -> exit 07:25:08), then the new one spoke'
+      - 'AC3: 140 unit tests OK; 140 run, 9 skipped with numpy and kokoro_onnx blocked, as CI runs them'
+      - 'AC4: a 0.5.0 client spoke through the 0.5.1 server at once (say returned in under 1 s), no /quit in server.log'
+      - 'S5 finding 2 on hardware: a 0.5.2 server built with DRAIN_CAP=4, mid-reply when 0.5.3 arrived: "still draining after 4 s; stopping speech" 07:25:55, exited, 0.5.3 listening 07:26:03'
+      - 'S5 finding 8 on hardware: say --out through the 0.5.3 server wrote a 60460-byte WAV'
+      - 'Pre-0.5.0 server (main, 0.4.0): refused /quit, kept speaking for the 0.5.3 client (utterance in its log), status shows "unknown (older than 0.5.0)"; claude-speak.log empty; retire-overran absent'
+      - 'Not covered on hardware: the terminal waiting line (the test shell is not a terminal; unit-tested), a truly hung player (simulated by the 4 s cap), macOS (CI runs the unit tests there)'
+      - 'claude plugin validate: fails on the reserved plugin name claude-speak, pre-existing on main (the plugin-rename topic), not touched by this story'
+      - 'Correction: ruff 0.15.4 is clean; the "29 = main baseline" in S4/S5 was unpinned latest ruff with newer rules'
+      - 'User disposition: "continue to s7" (accept)'
+    commit: 'S6 checkpoint commit'
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
@@ -120,13 +139,60 @@ closure_checks:
   deliverables_resolved: { status: pending, reason: '' }
   dod_verified: { status: pending, reason: '' }
 quality_gates:
-  lint: { status: pending, evidence: '' }
-  unit_tests: { status: pending, evidence: '' }
-  integration_tests: { status: pending, evidence: '' }
-  functional_tests: { status: pending, evidence: '' }
-  docs_quality: { status: pending, evidence: '' }
-  validators: { status: pending, evidence: '' }
-verified_claims: []
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check --no-cache (defaults) on scripts/server.py, scripts/claude_speak.py, tests/test_server.py, tests/test_client.py: All checks passed!; --select E4,E7,E9,F,I on scripts/ tests/: All checks passed!; python3 -m py_compile: ok'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 140 tests OK; 140 run, 9 skipped with numpy and kokoro_onnx blocked; timing classes 5 runs in a row OK (S5)'
+  integration_tests:
+    status: pass
+    evidence: 'Real Kokoro and player on omarchy, scratch data dir: 0.5.0 -> 0.5.1 handoff after a full drain, 0.5.2 -> 0.5.3 with a 4 s drain cap, /synth WAV, 0.4.0 server refusing /quit (see S6 evidence)'
+  functional_tests:
+    status: pass
+    evidence: 'claude-speak say and status through the bin/ wrapper at each version; status shows the server and client versions'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). README.md and CLAUDE.md changes reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: all pass, exit 0; pipeline_validator.py verify S5: pass'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (140 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as the bare CI jobs run it (numpy and kokoro_onnx blocked)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (140 run, 9 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Ruff defaults pass on the changed Python files'
+    command: 'uvx ruff@0.15.4 check --no-cache scripts/server.py scripts/claude_speak.py tests/test_server.py tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'Ruff CI selection passes'
+    command: 'uvx ruff@0.15.4 check --no-cache --select E4,E7,E9,F,I scripts tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'uv run --with pyyaml python ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All validations passed)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
 pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
 bypasses: []
 notes: ''
