@@ -36,6 +36,13 @@
 
 ## Decision log
 
+- 2026-11-20 (grilling after US-030): release stays per milestone (0.5.0 at the end of
+  milestone 3, with `pkill` once in its update block). A feature PR's merge approval also covers
+  its close PR if that PR only flips status (story, card, ROADMAP, pipeline record, memory-bank
+  status lines) with CI green. If code changes after S7, a fresh delta review covers that diff.
+  The plugin name `claude-speak` is kept for good. US-030 joins the later upstream batch. The
+  handoff check is a manual script (`tests/manual/handoff.sh`). Next story: US-031, lightweight.
+
 - 2026-11-19/20 (US-030): replace only an older server (newer wins); drain, then refuse with 503,
   with one retry through `ensure_server()`; 120 s client wait; 100 s server drain cap; no
   automatic kill of 0.4.x servers, so the 0.5.0 update block keeps `pkill` once (Lucas). Every

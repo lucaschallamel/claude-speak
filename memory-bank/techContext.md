@@ -22,7 +22,8 @@
 - Real-audio checks: run the worktree's server with its own `CLAUDE_SPEAK_DATA` (models symlinked
   from the installed data dir) and `CLAUDE_SPEAK_PLAYER` set to a logging script or `avatar-play`,
   so the installed plugin is untouched. Coverage when needed: `uvx --with numpy coverage run`.
-- Version handoff checks (US-030): copy `scripts/`, `bin/` and `.claude-plugin/` into scratch
+- Version handoff checks (US-030): run `tests/manual/handoff.sh` (real Kokoro and audio, not in
+  CI). It does the following by hand: copy `scripts/`, `bin/` and `.claude-plugin/` into scratch
   folders, set a different `version` in each `plugin.json`, and point every copy at one scratch
   `--data-dir`. The copies then share one socket. Lower a constant such as `DRAIN_CAP` in a copy
   to test a bound quickly. Never use the README `pkill` line in tests: it matches the installed
@@ -43,7 +44,7 @@ claude-speak@claude-speak`, then restart. `claude --plugin-dir .` runs the worki
 ## Known constraints
 
 - `claude plugin validate .` fails: the name `claude-speak` is reserved. It predates the fork;
-  install and update still work. A rename is an open decision.
+  install and update still work. The name is kept for good (decided 2026-11-20).
 
 ## Tools
 

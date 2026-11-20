@@ -18,6 +18,7 @@ claude plugin validate .         # check .claude-plugin/ manifests
 CLAUDE_SPEAK_DATA=/tmp/claude-speak ./bin/claude-speak say "hello"   # test the voice directly
 ./bin/claude-speak status        # server, player and settings
 ./bin/claude-speak stop
+tests/manual/handoff.sh          # server version handoff on real audio (manual, not in CI)
 # simulate a hook event:
 echo '{"hook_event_name":"Stop","session_id":"x","transcript_path":"/path/to.jsonl","cwd":"'"$PWD"'"}' \
   | CLAUDE_SPEAK_DATA=/tmp/claude-speak ./bin/claude-speak hook
