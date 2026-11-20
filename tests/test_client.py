@@ -3,6 +3,8 @@
 Run: python3 -m unittest discover tests
 """
 
+import argparse
+import contextlib
 import io
 import json
 import os
@@ -490,6 +492,27 @@ class EnsureServerTest(TempDataTest):
         popen.assert_not_called()
         self.assertIn("still draining", logged.call_args.args[1])
         self.assertTrue((self.data / "retire-overran").exists())
+
+    def test_say_out_refused_once_is_sent_again_to_the_new_server(self):
+        args = argparse.Namespace(data_dir=str(self.data), out=str(self.data / "x.wav"), text=["hi"],
+                                  voice=None, speed=None, summarize=None, summary_model=None)
+        with mock.patch.object(cs, "ensure_server") as ensure, \
+                mock.patch.object(cs, "request", side_effect=[(503, b"quitting"), (200, b"RIFF")]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            cs.cmd_say(args)
+        self.assertEqual(ensure.call_count, 2)
+        self.assertEqual((self.data / "x.wav").read_bytes(), b"RIFF")
+
+    def test_status_shows_both_versions_and_quitting(self):
+        args = argparse.Namespace(data_dir=str(self.data))
+        for health, expected in (({**NEW_HEALTH, "quitting": True}, "0.5.0 (quitting); this client 0.5.0"),
+                                 ({"ok": True}, "unknown (older than 0.5.0); this client 0.5.0")):
+            out = io.StringIO()
+            with mock.patch.object(cs, "VERSION", "0.5.0"), \
+                    mock.patch.object(cs, "server_health", return_value=health), \
+                    contextlib.redirect_stdout(out):
+                cs.cmd_status(args)
+            self.assertIn(f"version:     {expected}", out.getvalue())
 
     def test_another_worker_replaced_it_while_this_one_waited_for_the_lock(self):
         result, request, popen, _ = self.ensure([self.OLD, self.NEW])

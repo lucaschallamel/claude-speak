@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S7_CRITICAL_REVIEW
+current_stage: S8_CAPTURE
 status: active
 status_reason: ''
 initiated_at: '2026-11-19T17:36:42Z'
@@ -122,8 +122,25 @@ stages:
       - 'claude plugin validate: fails on the reserved plugin name claude-speak, pre-existing on main (the plugin-rename topic), not touched by this story'
       - 'Correction: ruff 0.15.4 is clean; the "29 = main baseline" in S4/S5 was unpinned latest ruff with newer rules'
       - 'User disposition: "continue to s7" (accept)'
-    commit: 'S6 checkpoint commit'
-  S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+    commit: 'ef0b279'
+  S7_CRITICAL_REVIEW:
+    status: completed
+    completed_at: '2026-11-20T08:30:00Z'
+    reviewed_commit: 'ef0b279'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent, read-only; inputs: commands/dod-verify.md (DoD Level 1 from framework-authoring/resources/definition-of-done.md), fresh-context-review.md, story, git diff main...ef0b279, pipeline_validator.py status output, the pipeline YAML and artefacts (author claims only), CLAUDE.md; Verdict dictated: no'
+      - 'Author pass after the fresh report: confirmed F1-F3; HTTP /synth 503 already tested since S5; found A1 (pre-existing server.log handle leak)'
+    evidence:
+      - 'Delegated to /cu:dod-verify: WARN; AC1a, AC1b, AC2 (bounded), AC3, AC4 PASS; no FAIL; WARN on DRY (deliberate twin), coverage, integration automation, API docstring, story spec; SKIP on version bump, CHANGELOG, principle tags, S8, PR'
+      - 'Challenge log: 7 entries from 2 perspectives (user updating the plugin, maintainer), all assessed; artefact docs/roadmap/pipeline-audit-trail/artifacts/US-030-s7-review.md'
+      - 'User disposition: "review, assess, mitigate all issues, findings and risks, if any, with precision and care"'
+      - 'F1: story AC2, /quit requirement, 503 list and decision 3 aligned with the code (drain cap, /warm and /synth, single retry)'
+      - 'F2: server docstring lists /synth and the drain cap'
+      - 'F3: say --out retries a 503 once through ensure_server(); tests for the retry and the status version line'
+      - 'F4: accepted at S5 (finding 4); F5: release step added to the story (claude-speak status across a real update); F6: committed here'
+      - 'A1: client closes its copy of the server.log handle after Popen; 0 ResourceWarnings'
+      - 'After fixes: 142 tests OK; 142 run, 9 skipped with numpy blocked; timing classes 5 runs OK; ruff 0.15.4 defaults and CI select clean'
+    commit: 'S7 commit'
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }

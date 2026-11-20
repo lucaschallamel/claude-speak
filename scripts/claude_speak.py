@@ -577,12 +577,12 @@ def ensure_server(data: Path, wait: float = 900) -> dict:
             health = _retire(data, health)
         if health:
             return health
-        log = open(data / "server.log", "ab")
-        server = subprocess.Popen(
-            [uv, "run", "--quiet", "--script", str(SERVER_SCRIPT),
-             "--data-dir", str(data), "--socket", str(socket_path(data))],
-            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
-        )
+        with open(data / "server.log", "ab") as log:  # the server keeps its own copy of the fd
+            server = subprocess.Popen(
+                [uv, "run", "--quiet", "--script", str(SERVER_SCRIPT),
+                 "--data-dir", str(data), "--socket", str(socket_path(data))],
+                stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
+            )
         deadline = time.time() + wait
         while time.time() < deadline and server.poll() is None:
             time.sleep(0.5)
@@ -910,10 +910,13 @@ def cmd_say(args) -> None:
     settings = _skill_settings(args, data)
     text = speakable(" ".join(args.text))
     if args.out:
-        ensure_server(data)
-        status, body = request(data, "POST", "/synth",
-                               {"text": text, "voice": settings["voice"], "speed": settings["speed"]},
-                               timeout=300)
+        for _ in range(2):  # 503: the server began quitting; the retry waits for the new one
+            ensure_server(data)
+            status, body = request(data, "POST", "/synth",
+                                   {"text": text, "voice": settings["voice"], "speed": settings["speed"]},
+                                   timeout=300)
+            if status != 503:
+                break
         if status != 200:
             sys.exit(f"claude-speak: synthesis failed: {body.decode(errors='replace')}")
         Path(args.out).write_bytes(body)

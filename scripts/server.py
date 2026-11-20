@@ -28,7 +28,8 @@ the reply resumes afterwards. A status line not started 5 s after "at" is droppe
                  from the top, else that session's (or the most recent) stored utterance plays
                  without synthesis; 404 when there is none
   POST /quit     exit once nothing is queued or playing, for a newer version; meanwhile
-                 /speak, /replay and /warm answer 503
+                 /speak, /replay, /warm and /synth answer 503; after DRAIN_CAP seconds it
+                 stops its speech and exits anyway
 """
 
 from __future__ import annotations
