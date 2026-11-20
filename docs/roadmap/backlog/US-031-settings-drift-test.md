@@ -18,6 +18,7 @@ github_issue: 31
 > - **2026-11-16**: Story file created from GitHub issue #31, filed by the backlog review of 2026-11-16; status Draft.
 > - **2026-11-20**: [S0_SELECT] Story selected, pipeline initiated on branch `lucaschallamel/US-031-settings-drift-test` (Orca worktree); status In Progress, card DOING, lightweight profile.
 > - **2026-11-20**: [S1_KICKOFF] Scope refined: the skill check maps keys to `config` flags, default values compared too (Lucas); AC1 widened; points stay 1.
+> - **2026-11-20**: [S3_EXECUTE] `SettingsDriftTest` added (4 tests, 146 in all, OK); six mutations each fail the expected test; CLAUDE.md names the test.
 
 # US-031: Settings drift test
 
@@ -31,7 +32,7 @@ CLAUDE.md requires every new setting in `DEFAULTS`, `plugin.json` `userConfig`, 
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: The test passes on main and fails when a setting is added to only one of those places,
+- [x] **AC1**: The test passes on main and fails when a setting is added to only one of those places,
   or when a default value differs between `DEFAULTS` and `userConfig`.
 
 Effort: XS. Could go upstream: yes.

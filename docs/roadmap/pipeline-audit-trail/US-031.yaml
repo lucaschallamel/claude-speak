@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S2_PLAN
+current_stage: S4_CODE_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -41,9 +41,32 @@ stages:
       - 'Story file updated: AC1 widened to default values; technical requirements rewritten (key-to-flag map); decisions section added'
       - 'Story points re-estimated: stay at 1'
       - 'Decisions posted on issue #31'
+    commit: '6049388'
+  S2_PLAN:
+    status: completed
+    completed_at: '2026-11-20T08:52:29Z'
+    reviewers:
+      - 'Author (Claude Code)'
+    evidence:
+      - 'Plan artefact: docs/roadmap/pipeline-audit-trail/artifacts/US-031-s2-plan.md'
+      - 'Alternatives: 4 considered (parse argparse, map in runtime, separate test file, plain substring); all rejected with reasons'
+      - 'What could go wrong: 5 risks with guards (bool vs int compare, empty-input pass, env leak, mutation left in tree, upstream friction)'
+      - 'No deviation from S1'
+    commit: 'committed with S3'
+  S3_EXECUTE:
+    status: completed
+    completed_at: '2026-11-20T08:54:27Z'
+    reviewers:
+      - 'Author (Claude Code): self-review against AC1'
+    evidence:
+      - 'tests/test_client.py: SettingsDriftTest, 4 tests (keys equal, default values equal with bool kept bool, OVERRIDABLE subset of DEFAULTS, each OVERRIDABLE flag in the speak-settings skill; auto_speak -> --auto)'
+      - 'CLAUDE.md Settings precedence: one sentence naming SettingsDriftTest'
+      - 'python3 -m unittest discover tests: Ran 146 tests, OK (142 before)'
+      - 'uvx ruff@0.15.4 check tests/test_client.py: All checks passed'
+      - 'AC1 mutation run in a scratch copy (scripts, tests, skills, .claude-plugin), working tree untouched: M1 foo in DEFAULTS only -> test_defaults_match_user_config FAIL; M2 foo in userConfig only -> same FAIL; M3 foo in DEFAULTS+userConfig+OVERRIDABLE, not skill -> test_skill_sets_overridable FAIL (key=foo); M4 foo in OVERRIDABLE only -> test_overridable_are_settings and test_skill_sets_overridable FAIL; M5 speed default 1.0 in userConfig only -> test_default_values_match FAIL (key=speed); M6 auto_speak default 1 (int) -> test_default_values_match FAIL (key=auto_speak); M0 control -> OK'
+      - 'Deviation from S2: the skill check uses assertTrue(re.search(...)) instead of assertRegex, so a failure prints one line, not the whole skill (seen in M3)'
+      - 'AC1 self-review: passes on main, fails when a setting is in one place only or a default differs: met'
     commit: ''
-  S2_PLAN: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
-  S3_EXECUTE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }

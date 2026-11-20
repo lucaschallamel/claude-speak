@@ -8,6 +8,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -162,6 +163,44 @@ class SettingsTest(TempDataTest):
         self.assertEqual(cs.load_overrides(self.data), {"voice": "am_adam"})
         cs.save_overrides(self.data, {"voice": None, "speed": 1.5})
         self.assertEqual(cs.load_overrides(self.data), {"speed": 1.5})
+
+
+class SettingsDriftTest(unittest.TestCase):
+    """A setting lives in several places (CLAUDE.md, "Settings precedence"); fail when one is missed."""
+
+    # The config flag for each overridable key is --<key-with-dashes>, except these.
+    FLAGS = {"auto_speak": "auto"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.user_config = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["userConfig"]
+        cls.skill = (ROOT / "skills" / "speak-settings" / "SKILL.md").read_text()
+
+    def test_defaults_match_user_config(self):
+        self.assertTrue(self.user_config)
+        self.assertEqual(set(cs.DEFAULTS), set(self.user_config),
+                         "add the setting to both DEFAULTS (scripts/claude_speak.py) and "
+                         "userConfig (.claude-plugin/plugin.json)")
+
+    def test_default_values_match(self):
+        for key in cs.DEFAULTS.keys() & self.user_config.keys():
+            with self.subTest(key=key):
+                ours, theirs = cs.DEFAULTS[key], self.user_config[key].get("default")
+                # True == 1 in Python, so a bool must stay a bool.
+                self.assertEqual((isinstance(ours, bool), ours), (isinstance(theirs, bool), theirs),
+                                 f"default of '{key}' differs between DEFAULTS and userConfig")
+
+    def test_overridable_are_settings(self):
+        self.assertTrue(cs.OVERRIDABLE)
+        self.assertLessEqual(set(cs.OVERRIDABLE), set(cs.DEFAULTS),
+                             "every OVERRIDABLE key must be in DEFAULTS")
+
+    def test_skill_sets_overridable(self):
+        for key in cs.OVERRIDABLE:
+            flag = "--" + self.FLAGS.get(key, key).replace("_", "-")
+            with self.subTest(key=key):
+                self.assertTrue(re.search(re.escape(flag) + r"(?![\w-])", self.skill),
+                                f"skills/speak-settings/SKILL.md never passes {flag} for '{key}'")
 
 
 class SummaryCacheTest(TempDataTest):
