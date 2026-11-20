@@ -542,16 +542,19 @@ def _retire(data: Path, health: dict) -> dict | None:
             return health  # a drain just overran: don't make every queued worker wait again
     except OSError:
         pass
+    if sys.stderr.isatty():  # say, setup: a person is waiting; hooks and workers have no terminal
+        print("claude-speak: waiting for the old voice server to finish speaking...", file=sys.stderr)
     deadline = time.time() + RETIRE_WAIT
     misses = 0
     while time.time() < deadline:
         time.sleep(0.5)
         misses = 0 if server_health(data) else misses + 1
         if misses >= 2:  # one slow /health on a loaded machine is not "gone"
+            overran.unlink(missing_ok=True)
             return None
     overran.touch()
     log_error(data, f"old server {health.get('version') or '(no version)'} still draining after "
-                    f"{RETIRE_WAIT} s; speech dropped")
+                    f"{RETIRE_WAIT} s; speech dropped. Run `claude-speak stop` to end it.")
     return health
 
 

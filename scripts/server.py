@@ -34,6 +34,7 @@ the reply resumes afterwards. A status line not started 5 s after "at" is droppe
 from __future__ import annotations
 
 import argparse
+import contextlib
 import io
 import json
 import math
@@ -80,6 +81,10 @@ def plugin_version(manifest: Path = MANIFEST) -> str:
 
 
 VERSION = plugin_version()
+# A quitting server stops what it is still playing after this long and exits, so a hung player
+# can't keep it alive. Below the client's RETIRE_WAIT (120 s), so the waiting client still sees
+# it go and starts the new server.
+DRAIN_CAP = 100
 
 # Kokoro voice names start with a language code.
 LANGS = {"a": "en-us", "b": "en-gb", "e": "es", "f": "fr-fr", "h": "hi",
@@ -252,6 +257,7 @@ class Speaker:
     prefetcher: threading.Thread | None = None  # the one _prefetch worker running, if any
     prefetch_next: Job | None = None  # the question it makes chunk 1 for next
     closed = False  # under state_lock: set by close() (/quit) or by watch_idle as it exits
+    synths = 0  # under state_lock: /synth requests in flight; the server doesn't exit mid-reply
 
     def __init__(self, kokoro: Kokoro, player: list[str] | None, silence: Path):
         self.kokoro = kokoro
@@ -319,6 +325,20 @@ class Speaker:
         """Refuse new speech, replays and warm-ups from now on; what is queued still plays."""
         with self.state_lock:
             self.closed = True
+
+    @contextlib.contextmanager
+    def synth_request(self):
+        """Hold while answering /synth: refused once closed, and counted so watch_idle waits
+        for the reply to be written before the server exits."""
+        with self.state_lock:
+            if self.closed:
+                raise Closed
+            self.synths += 1
+        try:
+            yield
+        finally:
+            with self.state_lock:
+                self.synths -= 1
 
     def warm(self) -> None:
         with self.state_lock:
@@ -670,13 +690,14 @@ class Handler(BaseHTTPRequestHandler):
                               body.get("priority"), body.get("at"))
                 self._json(202, {"ok": True})
             elif self.path == "/synth" and text:
-                samples, rate = speaker.synth(text, voice, speed)
-                payload = wav_bytes(samples, rate)
-                self.send_response(200)
-                self.send_header("Content-Type", "audio/wav")
-                self.send_header("Content-Length", str(len(payload)))
-                self.end_headers()
-                self.wfile.write(payload)
+                with speaker.synth_request():
+                    samples, rate = speaker.synth(text, voice, speed)
+                    payload = wav_bytes(samples, rate)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "audio/wav")
+                    self.send_header("Content-Length", str(len(payload)))
+                    self.end_headers()
+                    self.wfile.write(payload)
             else:
                 self._json(400, {"error": "expected /speak or /synth with text, /warm, /stop, /replay or /quit"})
         except Closed:
@@ -727,18 +748,27 @@ def watch_dictation(path: Path, stop, interval: float = 0.1) -> None:
 
 
 def watch_idle(server: Server, speaker: Speaker, idle_timeout: float,
-               tick: float = 15, drain_tick: float = 0.2) -> None:
-    """Shut the server down once nothing is queued or playing and either /quit was asked
-    or no request came for idle_timeout seconds. /quit wakes it at once, not at the next tick.
+               tick: float = 15, drain_tick: float = 0.2, drain_cap: float = DRAIN_CAP) -> None:
+    """Shut the server down once nothing is queued, playing or being sent by /synth and either
+    /quit was asked or no request came for idle_timeout seconds. /quit wakes it at once, not at
+    the next tick; a drain longer than drain_cap stops the speech and exits anyway.
 
     /quit closes the speaker first. On an idle exit the decision and speaker.closed are set
     under state_lock, so a /speak racing the exit either lands before it (and keeps the server
     busy) or is refused, never accepted and lost."""
+    quit_at = None
     while True:
         quitting = server.quit.wait(tick)
+        if quitting and quit_at is None:
+            quit_at = time.time()
+        overran = quitting and time.time() - quit_at > drain_cap
+        if overran:
+            log(f"still draining after {drain_cap:.0f} s; stopping speech")
+            speaker.stop()
         with speaker.state_lock:
             now = time.time()
-            exiting = now > speaker.busy_until and (quitting or now - server.last_used > idle_timeout)
+            exiting = overran or (now > speaker.busy_until and not speaker.synths
+                                  and (quitting or now - server.last_used > idle_timeout))
             if exiting:
                 speaker.closed = True
         if exiting:
@@ -747,6 +777,14 @@ def watch_idle(server: Server, speaker: Speaker, idle_timeout: float,
             return
         if quitting:
             time.sleep(drain_tick)
+
+
+def remove_socket(path: Path, inode: int) -> None:
+    """Remove the socket only if it is still ours: a newer server may already have bound the
+    same path while this one was exiting."""
+    with contextlib.suppress(OSError):
+        if path.stat().st_ino == inode:
+            path.unlink()
 
 
 def socket_in_use(path: Path) -> bool:
@@ -790,6 +828,7 @@ def main() -> None:
         f"player: {' '.join(speaker.player or ['none'])}")
 
     server = Server(str(sock), speaker, MODELS[args.model])
+    inode = sock.stat().st_ino
 
     threading.Thread(target=watch_idle, args=(server, speaker, args.idle_timeout), daemon=True).start()
     dictation = Path(DICTATION_STATE)
@@ -801,7 +840,7 @@ def main() -> None:
         server.serve_forever()
     finally:
         server.server_close()
-        sock.unlink(missing_ok=True)
+        remove_socket(sock, inode)
 
 
 if __name__ == "__main__":

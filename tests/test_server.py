@@ -844,6 +844,7 @@ class QuitTest(unittest.TestCase):
             self.assertEqual(self.call("POST", endpoint, {"text": "hi", "session": "s1"}),
                              (503, {"error": "quitting"}), endpoint)
         self.assertEqual(self.sp.queue, [])
+        self.assertEqual(self.call("POST", "/synth", {"text": "hi"}), (503, {"error": "quitting"}))
         self.assertEqual(self.call("POST", "/stop", {})[0], 200)
 
     def test_health_says_quitting_once_an_idle_exit_has_begun(self):
@@ -855,13 +856,14 @@ class QuitTest(unittest.TestCase):
 
 
 def fake_speaker(busy_until):
-    return mock.Mock(busy_until=busy_until, state_lock=threading.Lock(), closed=False)
+    return mock.Mock(busy_until=busy_until, state_lock=threading.Lock(), closed=False, synths=0)
 
 
 class WatchIdleTest(unittest.TestCase):
-    def watch(self, srv, speaker, idle_timeout=3600):
+    def watch(self, srv, speaker, idle_timeout=3600, drain_cap=3600):
         t = threading.Thread(target=server.watch_idle, args=(srv, speaker, idle_timeout),
-                             kwargs={"tick": 0.05, "drain_tick": 0.01}, daemon=True)
+                             kwargs={"tick": 0.05, "drain_tick": 0.01, "drain_cap": drain_cap},
+                             daemon=True)
         t.start()
         return t
 
@@ -883,6 +885,50 @@ class WatchIdleTest(unittest.TestCase):
         t.join(2)
         srv.shutdown.assert_called_once()
         self.assertTrue(speaker.closed)
+
+    def test_a_drain_past_the_cap_stops_the_speech_and_exits(self):
+        srv = mock.Mock(quit=threading.Event(), last_used=time.time())
+        speaker = fake_speaker(time.time() + 3600)  # a hung player: never finishes
+        srv.quit.set()
+        self.watch(srv, speaker, drain_cap=0.1).join(2)
+        speaker.stop.assert_called_once_with()
+        srv.shutdown.assert_called_once()
+        self.assertTrue(speaker.closed)
+
+    def test_a_synth_reply_in_flight_holds_the_exit(self):
+        srv = mock.Mock(quit=threading.Event(), last_used=time.time())
+        sp = fake_speaker(0.0)
+        sp.synths = 1
+        srv.quit.set()
+        t = self.watch(srv, sp)
+        time.sleep(0.2)
+        srv.shutdown.assert_not_called()
+        sp.synths = 0
+        t.join(2)
+        srv.shutdown.assert_called_once()
+
+    def test_synth_request_counts_and_is_refused_once_closed(self):
+        sp = speaker()
+        with sp.synth_request():
+            self.assertEqual(sp.synths, 1)
+        self.assertEqual(sp.synths, 0)
+        sp.close()
+        with self.assertRaises(server.Closed), sp.synth_request():
+            pass
+        self.assertEqual(sp.synths, 0)
+
+    def test_socket_removed_only_while_it_is_ours(self):
+        path = Path(tempfile.mkdtemp()) / "s.sock"
+        path.write_text("")
+        inode = path.stat().st_ino
+        replacement = path.with_name("new")
+        replacement.write_text("")
+        replacement.replace(path)  # a newer server bound the same path
+        server.remove_socket(path, inode)
+        self.assertTrue(path.exists())
+        server.remove_socket(path, path.stat().st_ino)
+        self.assertFalse(path.exists())
+        server.remove_socket(path, 0)  # already gone: no error
 
     def test_a_closed_speaker_refuses_speech_and_replay(self):
         sp = speaker()

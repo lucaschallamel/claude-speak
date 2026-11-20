@@ -405,6 +405,18 @@ class EnsureServerTest(TempDataTest):
         request.assert_called_once_with(self.data, "POST", "/quit")
         popen.assert_called_once()
 
+    def test_a_person_waiting_is_told_and_an_old_overrun_marker_is_cleared(self):
+        marker = self.data / "retire-overran"
+        marker.touch()
+        os.utime(marker, (0, 0))  # an overrun long ago: no longer skips the wait
+        stderr = io.StringIO()
+        stderr.isatty = lambda: True  # say or setup in a terminal
+        with mock.patch.object(cs.sys, "stderr", stderr):
+            result, _, _, _ = self.ensure([self.OLD, self.OLD, None, None, self.NEW])
+        self.assertEqual(result, self.NEW)
+        self.assertIn("waiting for the old voice server", stderr.getvalue())
+        self.assertFalse(marker.exists())
+
     def test_one_slow_health_check_is_not_gone(self):
         # a miss, then the old server answers again, then it has really gone
         result, _, popen, _ = self.ensure([self.OLD, self.OLD, None, self.OLD, None, None, self.NEW])

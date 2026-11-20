@@ -9,12 +9,13 @@ status: 'In Progress'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-16'
-last_modified: '2026-11-19'
+last_modified: '2026-11-20'
 github_issue: 30
 ---
 
 > [!note]- Progress updates
 >
+> - **2026-11-20**: [S5_ARCH_SEC_COMP_REVIEW] Fresh review PASS, 9 findings (3 Low, 6 Info), trust boundary touched, not security-sensitive; Lucas asked for all to be mitigated: server drain cap, /synth refused and held, own-socket removal, waiting notice, marker cleanup, dev data-dir note; 140 tests pass.
 > - **2026-11-19**: [S4_CODE_REVIEW] Fresh review PASS, 9 findings (5 Low, 4 Info); Lucas asked for all to be mitigated: 7 fixed in code and tests (134 pass), 2 handled by docs and the release checklist.
 > - **2026-11-19**: [S3_EXECUTE] Server reports its version, /quit drains then exits, 503 while quitting; client replaces only an older server; status shows the version; 14 new tests (126 pass); README and CLAUDE.md updated.
 > - **2026-11-19**: [S1_KICKOFF] Scope refined: restart only an older server, drain then exit, 503 while quitting, 120 s wait; old servers need one last manual step (Lucas); ACs 3 -> 4; points 2 -> 3; profile standard.
