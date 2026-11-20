@@ -19,6 +19,7 @@ github_issue: 31
 > - **2026-11-20**: [S0_SELECT] Story selected, pipeline initiated on branch `lucaschallamel/US-031-settings-drift-test` (Orca worktree); status In Progress, card DOING, lightweight profile.
 > - **2026-11-20**: [S1_KICKOFF] Scope refined: the skill check maps keys to `config` flags, default values compared too (Lucas); AC1 widened; points stay 1.
 > - **2026-11-20**: [S3_EXECUTE] `SettingsDriftTest` added (4 tests, 146 in all, OK); six mutations each fail the expected test; CLAUDE.md names the test.
+> - **2026-11-20**: [S4-S6] Fresh reviews S4 and S5 PASS, every finding mitigated (skill check limited to `config` lines, real `config` parser checked through `--help`); quality gates all pass (146 tests, Python 3.10, ruff, validators).
 
 # US-031: Settings drift test
 

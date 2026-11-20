@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S6_TEST_QUALITY_VERIFY
+current_stage: S7_CRITICAL_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -102,8 +102,17 @@ stages:
       - 'R1 key left out of OVERRIDABLE: documented in CLAUDE.md and the docstring; R3 deliberate userConfig absence: explicit exception decided by the story that adds it (story Decisions)'
       - 'Ponytail review nice-to-have: redundant assertTrue(self.user_config) removed'
       - 'After fixes: 146 tests OK; ruff@0.15.4 clean; mutations M1-M10 each fail the expected test (M3b skill flag without CLI flag, M10 CLI flag renamed are new), M0 control OK'
+    commit: '4d7ff68'
+  S6_TEST_QUALITY_VERIFY:
+    status: completed
+    completed_at: '2026-11-20T09:14:02Z'
+    reviewers:
+      - 'Author (Claude Code) via /cu:qa-gate, adapted to the project (unittest, pinned ruff, no npm or prettier)'
+    evidence:
+      - 'Delegated to /cu:qa-gate: PASS, all gates exit 0 on 4d7ff68; integration, functional and docs formatting not applicable (reasons in quality_gates)'
+      - 'verified_claims: 7 recorded with exit codes'
+      - 'GitHub Actions: tests.yml runs on pull_request and main pushes only, so no run on the branch yet; first CI run comes with the PR at S10'
     commit: ''
-  S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
@@ -120,13 +129,74 @@ closure_checks:
   deliverables_resolved: { status: pending, reason: '' }
   dod_verified: { status: pending, reason: '' }
 quality_gates:
-  lint: { status: pending, evidence: '' }
-  unit_tests: { status: pending, evidence: '' }
-  integration_tests: { status: pending, evidence: '' }
-  functional_tests: { status: pending, evidence: '' }
-  docs_quality: { status: pending, evidence: '' }
-  validators: { status: pending, evidence: '' }
-verified_claims: []
+  lint:
+    status: pass
+    evidence: 'uvx ruff@0.15.4 check --no-cache tests/test_client.py: All checks passed!; --select E4,E7,E9,F,I scripts tests: All checks passed! (on 4d7ff68)'
+  unit_tests:
+    status: pass
+    evidence: 'python3 -m unittest discover tests: 146 tests OK; bare CI form (numpy, kokoro_onnx blocked): 146 run, 9 skipped, OK; Python 3.10 via uv: 146 run, 9 skipped, OK (on 4d7ff68)'
+  integration_tests:
+    status: not_applicable
+    evidence: 'Test-only change: no runtime code, no server, model or audio path touched. The new test itself runs the real config parser through config --help.'
+  functional_tests:
+    status: not_applicable
+    evidence: 'No user-facing behaviour changed. AC1 shown by 11 mutations in a scratch copy (S3 six, S4 nine, S5 eleven incl. CLI checks), each failing the expected test; control OK.'
+  docs_quality:
+    status: not_applicable
+    evidence: 'The project has no markdown/JSON formatter (no package.json or prettier config). CLAUDE.md and story changes reviewed at S4 and S5.'
+  validators:
+    status: pass
+    evidence: 'user-story-validator.py docs/roadmap/backlog/: All validations passed, exit 0; pipeline_validator.py audit: 4/4 passed, exit 0'
+verified_claims:
+  - claim: 'Unit test suite passes'
+    command: 'python3 -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (146 tests OK)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes as the bare CI jobs run it (numpy and kokoro_onnx blocked)'
+    command: 'python3 -c "sys.modules[numpy]=None; sys.modules[kokoro_onnx]=None; unittest discover tests"'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (146 run, 9 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Unit test suite passes on Python 3.10 (oldest CI version)'
+    command: 'uv run --no-project --python 3.10 python -m unittest discover tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (146 run, 9 skipped)'
+    exit_code: 0
+    scope: 'project'
+    category: 'test_suite'
+  - claim: 'Ruff defaults pass on the changed Python file'
+    command: 'uvx ruff@0.15.4 check --no-cache tests/test_client.py'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'Ruff CI selection passes'
+    command: 'uvx ruff@0.15.4 check --no-cache --select E4,E7,E9,F,I scripts tests'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All checks passed!)'
+    exit_code: 0
+    scope: 'project'
+    category: 'lint'
+  - claim: 'All backlog stories pass validation'
+    command: 'uv run --with pyyaml python ~/.claude/plugins/cache/copper/cu/4.2.0/skills/backlog-management/scripts/user-story-validator.py docs/roadmap/backlog/'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (All validations passed)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
+  - claim: 'Pipeline records consistent'
+    command: 'python3 ~/.claude/plugins/cache/copper/cu/4.2.0/tools/pipeline_validator.py audit --root .'
+    expected: 'exit_code=0'
+    actual: 'exit_code=0 (4/4 passed)'
+    exit_code: 0
+    scope: 'project'
+    category: 'validator'
 pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
 bypasses: []
 notes: 'Decisions after S3 (Lucas, 2026-11-20, grilling): push branch now; three fresh reviews S4/S5/S7; S5 trust-boundary line; cmd_config gap note only; upstream in the later batch, no version bump.'
