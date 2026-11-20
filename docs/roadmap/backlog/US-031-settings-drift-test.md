@@ -45,6 +45,7 @@ Effort: XS. Could go upstream: yes.
 - `OVERRIDABLE` is a subset of `DEFAULTS`.
 - Every `OVERRIDABLE` key's `config` flag appears in `skills/speak-settings/SKILL.md`. The flag is `--` plus the key with dashes, except `auto_speak`, whose flag is `--auto`; the test holds that one exception.
 - Every `OVERRIDABLE` key's flag is accepted by the real `config` parser, read through `config --help` (S5: `main()` uses `parse_known_args`, so a flag the parser lacks would be dropped without an error).
+- Every flag on a `claude-speak config` line of the skill is accepted by the `config` parser (S7: a flag only in the skill would be dropped silently).
 - One test class in `tests/test_client.py`, stdlib only. No runtime or skill change.
 
 ## Decisions (S1, 2026-11-20)

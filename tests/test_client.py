@@ -220,6 +220,15 @@ class SettingsDriftTest(unittest.TestCase):
                                 f"no 'claude-speak config' line in skills/speak-settings/SKILL.md "
                                 f"passes the flag for '{key}'")
 
+    def test_skill_passes_only_known_flags(self):
+        # The other direction: a flag only in the skill would be dropped without an error.
+        flags = set(re.findall(r"--[\w-]+", self.config_lines))
+        self.assertTrue(flags, "no flag on a 'claude-speak config' line in skills/speak-settings/SKILL.md")
+        for flag in flags:
+            with self.subTest(flag=flag):
+                self.assertTrue(re.search(re.escape(flag) + r"(?![\w-])", self.config_help),
+                                f"skills/speak-settings/SKILL.md passes {flag}, which 'claude-speak config' lacks")
+
 
 class SummaryCacheTest(TempDataTest):
     def test_same_reply_and_model_hits(self):

@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S7_CRITICAL_REVIEW
+current_stage: S8_CAPTURE
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -112,8 +112,24 @@ stages:
       - 'Delegated to /cu:qa-gate: PASS, all gates exit 0 on 4d7ff68; integration, functional and docs formatting not applicable (reasons in quality_gates)'
       - 'verified_claims: 7 recorded with exit codes'
       - 'GitHub Actions: tests.yml runs on pull_request and main pushes only, so no run on the branch yet; first CI run comes with the PR at S10'
+    commit: 'f508f67'
+  S7_CRITICAL_REVIEW:
+    status: completed
+    completed_at: '2026-11-20T09:19:38Z'
+    reviewed_commit: 'f508f6777e6ffd4269c266efe8acf9197147b1e5'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/dod-verify.md, definition-of-done.md, fresh-context-review.md, story US-031, git diff main...f508f6777e6ffd4269c266efe8acf9197147b1e5, pipeline_validator.py status output (host also injected CLAUDE.md, COPPER rules, auto-memory; no build conversation); read-only, forbidden git commands listed; Verdict dictated: no'
+      - 'Author pass after the fresh report: agreed, none added'
+    evidence:
+      - 'Delegated to /cu:dod-verify (fresh): PASS; AC1 clauses a, b, c, e PASS, d WARN; TR1-TR6 PASS; S8-S10 criteria SKIP/WARN as belonging to later stages; reviewer ran 10 mutations of its own'
+      - 'Challenge log (5 entries, 3 perspectives): tester x2 (skill-only flag passes: real gap; --help side effects: none, accepted), maintainer x2 (FLAGS stale: caught; key left out of OVERRIDABLE: documented), upstream x1 (portable: stdlib, no runtime change)'
+      - 'User disposition: mitigate all findings and risks'
+      - 'F1 WARN AC1d skill-only flag passes and would be dropped by parse_known_args: new test_skill_passes_only_known_flags checks every flag on a skill config line against config --help; CLAUDE.md and story requirements updated'
+      - 'F2 Info parser-only flag passes: accepted, the parser also holds non-setting flags (--reset, --preview, --session), and the parser is not one of the places AC1 names'
+      - 'F3 Info S0 and S2 committed with S1 and S3: accepted, recorded in those stages'
+      - 'After fixes: 147 tests OK; Python 3.10: OK (9 skipped); ruff@0.15.4 defaults and CI selection clean; mutations M1-M12 as expected (M11 skill-only flag now FAIL, M12 skill+parser non-setting flag passes by design), M0 control OK'
+      - 'Change after S7 is test and docs only, so the extra fresh review for runtime changes after S7 (decision of 2026-11-20) does not apply'
     commit: ''
-  S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
@@ -127,7 +143,7 @@ closure_checks:
   pr_readiness: { status: pending, reason: '' }
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
   deliverables_resolved: { status: pending, reason: '' }
-  dod_verified: { status: pending, reason: '' }
+  dod_verified: { status: pass, reason: 'S7 fresh /cu:dod-verify PASS; AC1d WARN fixed after S7' }
 quality_gates:
   lint:
     status: pass
