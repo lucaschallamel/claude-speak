@@ -31,9 +31,9 @@ methodology: continuous-flow
 
 ## DOING
 
-- [/] [[US-031-settings-drift-test]]
-
 ## DONE
+
+- [x] [[US-031-settings-drift-test]]
 
 - [x] [[US-030-restart-a-stale-server-after-a]]
 

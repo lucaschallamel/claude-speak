@@ -13,10 +13,10 @@ change_surface:
   security_sensitive: false
   compliance_sensitive: false
 current_stage: S10_MERGE
-status: active
+status: completed
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
-completed_at: ''
+completed_at: '2026-11-20T09:29:29Z'
 stages:
   S0_SELECT:
     status: completed
@@ -152,17 +152,37 @@ stages:
       - '/cu:readme-update: re-checked after S8, no README-affecting change since; nothing to update'
       - 'Close docs committed with message docs(US-031): S9 close documentation'
       - 'Closure checklist 3-8: journal exists, memory bank updated, readme-update ran, DoD verified (S7), verified_claims recorded (7, S6); items 1, 2, 9-11 belong to S10'
-    commit: ''
-  S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
+    commit: '9aa9021'
+  S10_MERGE:
+    status: completed
+    completed_at: '2026-11-20T09:29:29Z'
+    pr_head: '9aa9021c554f899e00e76edff444f66117fc5247'
+    pr_url: 'https://github.com/lucaschallamel/claude-speak/pull/43'
+    merge_approval:
+      quote: 'Approved, merge the PR, go back to main, close cleanly this story, and advise about the best candidate to pick up next'
+      at: '2026-11-20T09:28:02Z'
+      head: '9aa9021c554f899e00e76edff444f66117fc5247'
+    evidence:
+      - 'Battery on 9aa9021 before PR creation: 147 passed, 0 failed, 0 skipped (numpy installed); bare CI form 147 run, 9 skipped; Python 3.10 147 run, 9 skipped; ruff 0.15.4 defaults and CI select clean; story validator and pipeline audit exit 0'
+      - 'PR #43 created with /cu:mr-create on Lucas''s approval (gates 1-6 pass; secret scan: no keys or tokens, only the co-author noreply address and the intended "Closes #31")'
+      - 'CI on PR #43 at 9aa9021: unittest ubuntu/macos x 3.10/3.13, 4/4 pass (first macOS run for this story)'
+      - 'Before merge: PR head 9aa9021 = approved head; 0 behind origin/main; MERGEABLE CLEAN'
+      - 'Merged on the platform: gh pr merge 43 --squash --match-head-commit 9aa9021 (repository convention) -> de4a0eefe0ca4a18d83972a7b03d388e7e133aad at 2026-11-20T09:29:29Z; issue #31 closed by the merge'
+      - 'commit_count: 10'
+      - 'Changed after review: CLAUDE.md, docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md, docs/roadmap/backlog/US-031-settings-drift-test.md, docs/roadmap/pipeline-audit-trail/US-031.yaml, memory-bank/activeContext.md, memory-bank/archive/activeContext-archive.md, memory-bank/progress.md, memory-bank/systemPatterns.md, memory-bank/techContext.md, tests/test_client.py'
+      - 'Those changes came from: S7 fix 71c1e3d (skill flags must exist in the parser; test and docs only, after the S7 review of f508f67), then S8-S9 capture and bookkeeping; covered by the battery and CI on 9aa9021, not by a further fresh review (no runtime code changed after S7)'
+      - 'Ancestry check unverified: the squash merge leaves the reviewed commits off main, so pipeline_validator verify S10_MERGE ancestry is expected to fail; recorded here, pr_head not changed (Rule 07 Control 1)'
+      - 'Post-merge close: chore/US-031-close from main de4a0ee: story Done, card DONE, ROADMAP ticked, memory-bank status lines, pipeline completed; merged on the feature approval (decision of 2026-11-20: a close PR that only flips status, with CI green); the in progress label is removed when it merges'
+    commit: 'de4a0ee'
 closure_checks:
-  backlog_status: { status: pending, reason: '' }
-  board_status: { status: pending, reason: '' }
+  backlog_status: { status: pass, reason: 'Story status Done (close PR)' }
+  board_status: { status: pass, reason: 'Card in DONE (close PR)' }
   dev_journal: { status: pass, reason: 'docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md' }
   memory_bank: { status: pass, reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-030 block archived; consistency PASS with COPPER_DOCS_ROOT=.' }
   readme_review: { status: pass, reason: '/cu:readme-update ran: 3 READMEs reviewed, nothing to update (Lucas)' }
   commit_evidence: { status: pass, reason: 'Checkpoint commits S1 6049388, S3 ef86733, S6 f508f67, S9 close docs; review fixes 081dc78, 4d7ff68, 71c1e3d' }
-  pr_readiness: { status: pending, reason: '' }
-  pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
+  pr_readiness: { status: pass, reason: 'Branch clean, pushed, 0 behind main, battery exit 0 on the PR head' }
+  pr_creation: { status: pass, reason: 'PR #43 https://github.com/lucaschallamel/claude-speak/pull/43' }
   deliverables_resolved: { status: pass, reason: 'AC1 met (S3, S7); every S4, S5, S7 and ponytail finding mitigated or accepted with reason' }
   dod_verified: { status: pass, reason: 'S7 fresh /cu:dod-verify PASS; AC1d WARN fixed after S7' }
 quality_gates:
@@ -234,6 +254,12 @@ verified_claims:
     exit_code: 0
     scope: 'project'
     category: 'validator'
-pr_readiness: { status: pending, branch: '', branch_clean: false, ready_for_pr: false, evidence: [] }
+pr_readiness:
+  status: pass
+  branch: lucaschallamel/US-031-settings-drift-test
+  branch_clean: true
+  ready_for_pr: true
+  evidence:
+    - 'git status clean; pushed; 0 behind origin/main; battery exit 0 on 9aa9021; CI 4/4'
 bypasses: []
 notes: 'Decisions after S3 (Lucas, 2026-11-20, grilling): push branch now; three fresh reviews S4/S5/S7; S5 trust-boundary line; cmd_config gap note only; upstream in the later batch, no version bump.'
