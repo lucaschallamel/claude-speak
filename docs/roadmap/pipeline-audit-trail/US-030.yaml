@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S8_CAPTURE
+current_stage: S10_MERGE
 status: active
 status_reason: ''
 initiated_at: '2026-11-19T17:36:42Z'
@@ -141,20 +141,52 @@ stages:
       - 'A1: client closes its copy of the server.log handle after Popen; 0 ResourceWarnings'
       - 'After fixes: 142 tests OK; 142 run, 9 skipped with numpy blocked; timing classes 5 runs OK; ruff 0.15.4 defaults and CI select clean'
     commit: 'f101934'
-  S8_CAPTURE: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
-  S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
+  S8_CAPTURE:
+    status: completed
+    completed_at: '2026-11-20T09:00:00Z'
+    reviewers:
+      - 'Author (Claude Code): /cu:dev-journal, /cu:memory-update, /cu:readme-update in that order'
+    evidence:
+      - 'docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md'
+      - '/cu:memory-update: activeContext.md (US-030 session block, current phase, next steps), progress.md (works, decision log, history), systemPatterns.md (newer-server-wins pattern, two fork divergences: watch_idle and ensure_server/send_to_server, nested-waits anti-pattern), techContext.md (version handoff checks, pinned ruff, worktree guard); projectbrief.md and productContext.md reviewed, unchanged (no scope or product change)'
+      - 'prune-memory-bank.py: rolled the US-005 session block to archive/activeContext-archive.md; the script appended it at the end, so it was moved to the top (newest first), same words verified; --check: PARTIAL (budget table not readable here); sizes measured with tiktoken cl100k_base: 223-1232 tokens per file, all far under budget'
+      - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line)'
+      - '/cu:readme-update: README.md restart bullet reworded (it said nothing is cut off next to the 100 s cap); docs/roadmap/README.md and docs/dev-journal/README.md generic, unchanged; scripts/, tests/, memory-bank/ have no README by repository convention, none created'
+    commit: 'S8 changes committed with S9'
+  S9_CLOSE:
+    status: completed
+    completed_at: '2026-11-20T09:20:00Z'
+    evidence:
+      - '/cu:story-update: AC1-AC4 ticked as met (AC1, AC2 on real hardware at S6; AC3 by 142 unit tests; AC4 by tests and on hardware); S9 progress entry; last_modified 2026-11-20'
+      - 'Story status stays In Progress (Done and card DONE move at the post-merge close, TD-173)'
+      - '/cu:readme-update: ran at S8 (README.md restart bullet reworded); since then only the story file and pipeline record changed, so no README needed changes'
+      - 'user-story-validator: 24/24 pass, exit 0'
+      - 'Close docs (S8 capture and S9) committed in the S9 commit below and pushed'
+    commit: 'S9 commit'
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
 closure_checks:
-  backlog_status: { status: pending, reason: '' }
-  board_status: { status: pending, reason: '' }
-  dev_journal: { status: pending, reason: '' }
-  memory_bank: { status: pending, reason: '' }
-  readme_review: { status: pending, reason: '' }
-  commit_evidence: { status: pending, reason: '' }
+  backlog_status: { status: pending, reason: 'Story stays In Progress until the merge; Done at the post-merge close (TD-173)' }
+  board_status: { status: pending, reason: 'Card stays in DOING until the merge; DONE at the post-merge close (TD-173)' }
+  dev_journal:
+    status: pass
+    reason: 'docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md'
+  memory_bank:
+    status: pass
+    reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-005 block archived (newest first); consistency PASS with COPPER_DOCS_ROOT=.'
+  readme_review:
+    status: pass
+    reason: 'README.md restart bullet current and reworded; other READMEs in scope generic and unchanged'
+  commit_evidence:
+    status: pass
+    reason: 'Checkpoint commits S0+S1 b1252e8, S3 f92e345, S4 29aa4f1 and 7891888 (ponytail pass), S5 3ccf298, S6 ef0b279, S7 f101934, S9 close docs; every commit pushed after it'
   pr_readiness: { status: pending, reason: '' }
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
-  deliverables_resolved: { status: pending, reason: '' }
-  dod_verified: { status: pending, reason: '' }
+  deliverables_resolved:
+    status: pass
+    reason: 'Code, tests and docs delivered; every S4, ponytail, S5 and S7 finding mitigated or accepted with its reason; the 0.5.0 version bump and the real-update status check are release steps in the story Release section'
+  dod_verified:
+    status: pass
+    reason: '/cu:dod-verify at S7 (fresh): WARN, all ACs PASS, no FAIL; every WARN item mitigated at S7 (f101934)'
 quality_gates:
   lint:
     status: pass

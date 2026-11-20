@@ -1,6 +1,6 @@
 # Active context
 
-**Last Updated**: 2026-11-16
+**Last Updated**: 2026-11-20
 
 **Purpose**: the current focus. Rolling: keep the last one or two sessions, move older ones to
 [archive/](archive/activeContext-archive.md).
@@ -9,34 +9,32 @@
 
 Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16: milestone 4
 "Smarter speech" comes next (release 0.5.0), then milestone 3 "Characters"; order in
-`docs/ROADMAP.md`.
+`docs/ROADMAP.md`. Milestone 3 Smarter speech started with US-030 (2026-11-19/20).
 
-## Session 2026-11-14/15: US-005 , priority lanes (urgent speech preempts chatty speech)
+## Session 2026-11-19/20: US-030 , restart a stale server after a plugin update
 
-- **Focus**: second story through the full `/cu:pipe`, S0-S8 so far; three S3 rounds, seven fresh
-  reviews (S4 x3, S5 x2, S7, plus round-1 S4/S5), two hands-on rounds through `avatar-play`.
-- **Delivered**: `/speak` `priority` (urgent, normal, low) and `at`; lanes after any replay;
-  another session's higher lane cuts a status line at once and a reply at its next chunk, then the
-  reply resumes from its first unplayed chunk; stale status lines (5 s from the hook) dropped by
-  the worker and the server; a session's status line never replaces its question or reply; one
-  chunk rule for all speech (about 80 chars: sentences, long ones at commas and semicolons);
-  stop-ahead plus a single prefetch worker for the waiting question's first chunk; huge or bad
-  `at` clamped; CI installs numpy on the 3.13 jobs. 112 tests.
-- **Key decisions** (Lucas, 23 in the story file): cut status lines, resume replies; staleness
-  from the hook at both ends; fix the cold case in the story (AC6); one ~80-char chunk rule after
-  hearing a 15 s wait over a reply; prefetch; AC1 bars are medians, met on a quiet machine
-  (decision 23), loaded tail a known limit; offer Quiet features upstream later as a batch.
-- **Measured** (quiet machine): status line median 0.74 s / worst 0.80 s; reply 0.00 s after the
-  chunk (hands-on 2.0 s wait, was 15 s); cold case median 1.16 s / worst 1.39 s.
-- **Learnings**: check machine load before measuring Kokoro (load 13-18 gave 0.7-9.6 s for the same
-  code); Kokoro synthesis can't be interrupted, so chunk size bounds how long preempting speech
-  waits; listening found the 15 s reply wait that the scripted cases missed; my ponytail review
-  missed a drain-thread leak a fresh reviewer found; the avatar page needs a click before it plays.
-- **Journal**: [2026-11-15-us-005-priority-lanes](../docs/dev-journal/2026/11/2026-11-15-us-005-priority-lanes.md)
+- **Focus**: third story through the full `/cu:pipe` (standard profile), S0-S8 so far, in the
+  Orca worktree `us-030-stale-server-restart`. Three fresh reviews (S4, S5, S7), one ponytail
+  review, and a real-hardware run with scratch plugin copies at five versions.
+- **Delivered**: both processes read `version` from `plugin.json`, and `/health` reports
+  `version` and `quitting`. The client replaces only an older server: it posts `/quit` under
+  `server.lock` and waits up to 120 s (gone = two health misses in a row). A quitting server
+  refuses `/speak`, `/replay`, `/warm` and `/synth` with 503, finishes its queue, and exits; after
+  `DRAIN_CAP` (100 s) it stops its speech and exits anyway. A 503 is retried once. On exit, the
+  socket is removed only if it is still the server's own. `status` shows both versions. 142 tests.
+- **Key decisions**: old servers (0.4.x) get no automatic kill; the 0.5.0 update block keeps
+  `pkill` once (Lucas, S1). Newer wins. Drain, then refuse. The 120 s wait drops one utterance
+  past it. Every review finding was mitigated at Lucas's request ("mitigate all").
+- **Learnings**: nest the bounds (server drain cap under client wait); fresh reviewers find race
+  windows the author misses; brief read-only reviewers with the exact forbidden git commands; the
+  worktree guard refuses git-like text in complex commands, so use Write/Edit or script files.
+- **Journal**: [2026-11-20-us-030-stale-server-restart](../docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md)
 
 ## Next steps
 
-- [ ] Next story: US-030 (restart a stale server after a plugin update), standard profile; then
-      US-031 (lightweight profile: test only), then US-006 (measure the Notification delay at S1).
+- [/] US-030: S9 close and S10 PR next; the 0.5.0 release bumps `plugin.json` and keeps `pkill`
+      once in its update block, then `claude-speak status` across a real 0.5.0 to 0.5.x update.
+- [ ] Then US-031 (lightweight profile: test only), then US-006 (measure the Notification delay
+      at S1).
 - [ ] Laptops: Lucas runs the 0.4.0 update block on each when he is on it.
 - [ ] From now on: `in progress` label at S0 (removed by the close PR); re-estimate points at S1.

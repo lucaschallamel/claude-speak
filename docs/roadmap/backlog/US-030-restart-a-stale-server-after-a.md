@@ -15,6 +15,8 @@ github_issue: 30
 
 > [!note]- Progress updates
 >
+> - **2026-11-20**: [S9_CLOSE] AC1-AC4 ticked as met (AC1 and AC2 on real hardware at S6, AC3 by 142 unit tests, AC4 in tests and on hardware); close docs committed; status stays In Progress until the merge.
+> - **2026-11-20**: [S8_CAPTURE] Dev journal written; memory bank updated (US-005 session block archived); README restart bullet reworded so it no longer contradicts the 100 s cap.
 > - **2026-11-20**: [S7_CRITICAL_REVIEW] Fresh DoD review WARN (all ACs pass, no FAIL), 6 findings; Lucas asked for all to be mitigated: story spec brought in line (AC2 drain cap, 503 list, decision 3), server docstring, say --out retries a 503, status and retry tests, release step for a real update check; 142 tests pass.
 > - **2026-11-20**: [S5_ARCH_SEC_COMP_REVIEW] Fresh review PASS, 9 findings (3 Low, 6 Info), trust boundary touched, not security-sensitive; Lucas asked for all to be mitigated: server drain cap, /synth refused and held, own-socket removal, waiting notice, marker cleanup, dev data-dir note; 140 tests pass.
 > - **2026-11-19**: [S4_CODE_REVIEW] Fresh review PASS, 9 findings (5 Low, 4 Info); Lucas asked for all to be mitigated: 7 fixed in code and tests (134 pass), 2 handled by docs and the release checklist.
@@ -36,10 +38,10 @@ After an update the old server keeps running the old code for up to `CLAUDE_SPEA
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: From 0.5.0 onwards, after a version bump the next speech runs the new server code with no manual step. A server older than this story (0.4.x and before) still needs the `pkill` line of the update block, one last time.
-- [ ] **AC2**: Speech playing or queued when the update is detected finishes before the old server exits. Only a drain longer than 100 s (a hung player) is cut, so the old server cannot outlive the client's 120 s wait (S5 finding 2).
-- [ ] **AC3**: Unit tests cover the version check and `/quit` on a busy and an idle server.
-- [ ] **AC4**: A client never restarts a server of the same or a newer version, so two sessions on different plugin versions do not restart each other's server in turn.
+- [x] **AC1**: From 0.5.0 onwards, after a version bump the next speech runs the new server code with no manual step. A server older than this story (0.4.x and before) still needs the `pkill` line of the update block, one last time.
+- [x] **AC2**: Speech playing or queued when the update is detected finishes before the old server exits. Only a drain longer than 100 s (a hung player) is cut, so the old server cannot outlive the client's 120 s wait (S5 finding 2).
+- [x] **AC3**: Unit tests cover the version check and `/quit` on a busy and an idle server.
+- [x] **AC4**: A client never restarts a server of the same or a newer version, so two sessions on different plugin versions do not restart each other's server in turn.
 
 Effort: S. Could go upstream: yes.
 

@@ -223,11 +223,11 @@ The client (`scripts/claude_speak.py`) is stdlib-only Python. The voice server (
   session's own status line never interrupts its question or reply. A replay still goes first.
 - **Restart after an update**: after `claude plugin update`, the first speech from the new
   version asks the old voice server to exit once it has finished what it is saying, then starts
-  the new one. Nothing is cut off (an old server still talking after 100 s is stopped), and only
-  an older server is replaced, so sessions still on the previous version keep working.
-  `claude-speak say` may pause while the old server finishes, and says so.
-  `claude-speak status` shows the server's version. Servers
-  from before 0.5.0 don't know how to step aside: end them once by hand after updating to 0.5.0
+  the new one. Speech already playing or queued finishes first; only an old server still talking
+  after 100 s is stopped. Only an older server is replaced, so sessions still on the previous
+  version keep working. `claude-speak say` may pause while the old server finishes, and says so.
+  `claude-speak status` shows the server's version. Servers from before 0.5.0 don't know how to
+  step aside: end them once by hand after updating to 0.5.0
   (`pkill -f '[s]erver.py --data-dir .*claude-speak-claude-speak'`).
 
 ### Hotkeys

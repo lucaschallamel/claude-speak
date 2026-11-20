@@ -1,6 +1,6 @@
 # System patterns
 
-**Last Updated**: 2026-11-15
+**Last Updated**: 2026-11-20
 
 **Purpose**: architecture and the patterns that must hold. The full map is in
 [CLAUDE.md](../CLAUDE.md) (Architecture); this file records only what CLAUDE.md does not.
@@ -19,6 +19,11 @@ chunk through a player command, which agent-avatar replaces.
 - **Additive fork changes**: new behaviour behind settings or env vars; upstream code paths kept.
 - **Integration through env**: agent-avatar is reached only through `CLAUDE_SPEAK_PLAYER` and
   `CLAUDE_SPEAK_AVATAR_URL`.
+- **Newer server wins** (US-030): the client replaces only an older server (`_stale`), via `/quit`
+  under `server.lock`. A quitting server drains, refuses new work with 503 (`Closed`), and exits.
+  Every wait is bounded and nested: the server's `DRAIN_CAP` (100 s) sits under the client's
+  `RETIRE_WAIT` (120 s), so the waiting client sees the exit rather than timing out. A refused
+  request is retried once through `ensure_server()`.
 
 ## Fork divergences from upstream code
 
@@ -40,6 +45,15 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
 - `split_chunks` and `CHUNK_CHARS` in `scripts/server.py` (US-005): chunks went from 250 to about
   80 characters, split at sentences and, inside long sentences, at commas and semicolons (no
   longer at colons); the packing loop moved into `_pack`. Covered by `SplitChunksTest`.
+- `watch_idle` in `scripts/server.py` (US-030): replaces upstream's inline idle-watch thread in
+  `main()`. It wakes on `/quit` and decides the exit under `state_lock`, setting
+  `Speaker.closed`. It also waits for `/synth` replies in flight and enforces `DRAIN_CAP`. On
+  exit, `main()` removes the socket only if it has the same inode (`remove_socket`). Covered by
+  `WatchIdleTest` and `QuitTest`.
+- `ensure_server` and `send_to_server` in `scripts/claude_speak.py` (US-030): health is checked
+  twice (outside and inside `server.lock`), an older or quitting server is retired (`_retire`),
+  the `server.log` handle is closed after `Popen`, and a 503 is retried once. Covered by
+  `EnsureServerTest`.
 - `Server.__init__` in `scripts/server.py` (US-004): binds the socket under umask `0o177`, so only
   the user can connect even when it falls back to a shared `/tmp`.
 
@@ -51,6 +65,9 @@ when pulling upstream; keep the fork's behaviour and re-apply upstream's change 
 - Large speech chunks: Kokoro synthesis can't be interrupted, so preempting speech waits for the
   chunk in flight and, over a reply, for the chunk playing (US-005: 250-char chunks meant a 15 s
   wait). Keep `CHUNK_CHARS` small.
+- Unbounded or un-nested waits between the two processes: a quitting server with no drain cap
+  could outlive every client wait (US-030 S5). Any new wait gets a cap that sits inside the wait
+  of whoever is waiting on it.
 - Trusting latency numbers taken under load: check the load average first and record it with every
   measurement set (US-005: the same code measured 0.7-9.6 s at load 13-18).
 
