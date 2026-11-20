@@ -5,7 +5,7 @@ title: 'Settings drift test'
 epic: '3 Smarter speech'
 priority: 'High'
 story_points: 1
-status: 'In Progress'
+status: 'Done'
 assignee: ''
 author: 'Claude Code'
 created: '2026-11-16'
@@ -23,6 +23,7 @@ github_issue: 31
 > - **2026-11-20**: [S7_CRITICAL_REVIEW] Fresh DoD review PASS; the AC1 WARN (a flag only in the skill passed) fixed with a skill-to-parser check; 147 tests.
 > - **2026-11-20**: [S8_CAPTURE] Dev journal, memory bank and README review captured.
 > - **2026-11-20**: [S9_CLOSE] Close documentation committed; status stays In Progress until the merge (Done and card DONE in the close PR).
+> - **2026-11-20**: [S10_MERGE] PR #43 squash-merged as de4a0ee on Lucas's approval (CI 4/4 green on 9aa9021); issue #31 closed; story Done, card DONE, pipeline completed.
 
 # US-031: Settings drift test
 

@@ -15,7 +15,7 @@
 - Merged to main (US-030, PR #40, 2026-11-20): a plugin update takes
   effect on the next utterance. The old server drains and exits, then the new one starts; only an
   older server is replaced. Reaches installs with 0.5.0.
-- On branch (US-031, PR at S10): `SettingsDriftTest` fails when a setting is missing from one of
+- Merged to main (US-031, PR #43, 2026-11-20): `SettingsDriftTest` fails when a setting is missing from one of
   its places, a default differs, or a skill flag and the `config` parser disagree.
 - 147 unit tests (9 need numpy: CI runs them on the 3.13 jobs, the 3.10 jobs skip them), CI on
   Linux and macOS.
@@ -79,4 +79,4 @@
 - 2026-11-14: trust-boundary list and workflow decisions on main (PR #25).
 - 2026-11-14/15: US-005 priority lanes through S0-S8 on its branch.
 - 2026-11-19/20: US-030 stale-server restart delivered through the full pipeline (PR #40, 5eaabfa).
-- 2026-11-20: US-031 settings drift test through S0-S8 on its branch.
+- 2026-11-20: US-031 settings drift test delivered through the full pipeline (PR #43, de4a0ee).

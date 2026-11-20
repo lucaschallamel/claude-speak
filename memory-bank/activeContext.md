@@ -34,7 +34,7 @@ Milestone 2 Quiet shipped as v0.4.0 (2026-11-15). Backlog reviewed on 2026-11-16
 
 - [ ] 0.5.0 release (end of milestone 3): bump `plugin.json`, keep `pkill` once in the update
       block for the 0.4.x server, then `claude-speak status` across a real 0.5.0 to 0.5.x update.
-- [/] US-031: S9 close docs, then S10 PR (first CI run, macOS included) and merge on approval.
+- [x] US-031: merged as PR #43 (de4a0ee), CI 4/4 green; closed.
 - [ ] Then US-006 (measure the Notification delay at S1).
 - [ ] Laptops: Lucas runs the 0.4.0 update block on each when he is on it.
 - [ ] From now on: `in progress` label at S0 (removed by the close PR); re-estimate points at S1.
