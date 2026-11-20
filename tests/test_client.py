@@ -166,7 +166,11 @@ class SettingsTest(TempDataTest):
 
 
 class SettingsDriftTest(unittest.TestCase):
-    """A setting lives in several places (CLAUDE.md, "Settings precedence"); fail when one is missed."""
+    """A setting lives in several places (CLAUDE.md, "Settings precedence"); fail when they drift.
+
+    It cannot tell that a new key was meant to be user-toggleable, so a key left out of
+    OVERRIDABLE passes. The hand-written flags in cmd_config are not checked (US-031).
+    """
 
     # The config flag for each overridable key is --<key-with-dashes>, except these.
     FLAGS = {"auto_speak": "auto"}
@@ -174,7 +178,9 @@ class SettingsDriftTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.user_config = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["userConfig"]
-        cls.skill = (ROOT / "skills" / "speak-settings" / "SKILL.md").read_text()
+        skill = (ROOT / "skills" / "speak-settings" / "SKILL.md").read_text()
+        # Only the command lines count: a flag named in prose alone would not reach the CLI.
+        cls.config_lines = "\n".join(line for line in skill.splitlines() if "claude-speak config" in line)
 
     def test_defaults_match_user_config(self):
         self.assertTrue(self.user_config)
@@ -188,7 +194,7 @@ class SettingsDriftTest(unittest.TestCase):
                 ours, theirs = cs.DEFAULTS[key], self.user_config[key].get("default")
                 # True == 1 in Python, so a bool must stay a bool.
                 self.assertEqual((isinstance(ours, bool), ours), (isinstance(theirs, bool), theirs),
-                                 f"default of '{key}' differs between DEFAULTS and userConfig")
+                                 f"default of '{key}' differs: DEFAULTS {ours!r}, userConfig {theirs!r}")
 
     def test_overridable_are_settings(self):
         self.assertTrue(cs.OVERRIDABLE)
@@ -196,11 +202,14 @@ class SettingsDriftTest(unittest.TestCase):
                              "every OVERRIDABLE key must be in DEFAULTS")
 
     def test_skill_sets_overridable(self):
+        self.assertTrue(self.config_lines, "no 'claude-speak config' line in skills/speak-settings/SKILL.md")
+        self.assertLessEqual(set(self.FLAGS), set(cs.OVERRIDABLE), "stale key in FLAGS")
         for key in cs.OVERRIDABLE:
             flag = "--" + self.FLAGS.get(key, key).replace("_", "-")
             with self.subTest(key=key):
-                self.assertTrue(re.search(re.escape(flag) + r"(?![\w-])", self.skill),
-                                f"skills/speak-settings/SKILL.md never passes {flag} for '{key}'")
+                self.assertTrue(re.search(re.escape(flag) + r"(?![\w-])", self.config_lines),
+                                f"no 'claude-speak config' line in skills/speak-settings/SKILL.md "
+                                f"passes {flag} for '{key}'")
 
 
 class SummaryCacheTest(TempDataTest):

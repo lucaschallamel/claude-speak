@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S4_CODE_REVIEW
+current_stage: S5_ARCH_SEC_COMP_REVIEW
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -67,7 +67,23 @@ stages:
       - 'Deviation from S2: the skill check uses assertTrue(re.search(...)) instead of assertRegex, so a failure prints one line, not the whole skill (seen in M3)'
       - 'AC1 self-review: passes on main, fails when a setting is in one place only or a default differs: met'
     commit: 'ef86733'
-  S4_CODE_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
+  S4_CODE_REVIEW:
+    status: completed
+    completed_at: '2026-11-20T09:05:31Z'
+    reviewed_commit: '6bb4aa435ff52bfd0fca67c2d343cfb08ff2d616'
+    reviewers:
+      - 'Fresh reviewer: general-purpose subagent; inputs: commands/quality-review.md, fresh-context-review.md, story US-031, git diff main...6bb4aa435ff52bfd0fca67c2d343cfb08ff2d616, CLAUDE.md (host also injected COPPER rules and the global CLAUDE.md; no build conversation); read-only, forbidden git commands listed; Verdict dictated: no'
+      - 'Author pass after the fresh report: agreed with all five findings, none added'
+    evidence:
+      - 'Delegated to /cu:quality-review (fresh): PASS, 0 critical, 0 high, 0 medium, 2 low, 3 info; reviewer ran 14 mutations of its own'
+      - 'User disposition: mitigate all findings and risks (equivalent to [C], fix before S5)'
+      - 'F1 Low CLAUDE.md overclaim: sentence narrowed to what is checked, and states it cannot tell a key should be in OVERRIDABLE; class docstring names the limits'
+      - 'F2 Low flag found in prose only: check now reads only lines containing claude-speak config'
+      - 'F3 Info cryptic message: message shows both values (DEFAULTS 1.1, userConfig 1.0)'
+      - 'F4 Info stale FLAGS entry: asserts set(FLAGS) <= set(OVERRIDABLE); also asserts a config line exists'
+      - 'F5 Info: no action needed'
+      - 'After fixes: 146 tests OK; ruff@0.15.4 clean; mutations M1-M9 each fail the expected test (M7 prose-only flag, M8 stale FLAGS, M9 no config line are new), M0 control OK'
+    commit: ''
   S5_ARCH_SEC_COMP_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S6_TEST_QUALITY_VERIFY: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
   S7_CRITICAL_REVIEW: { status: pending, completed_at: '', reviewers: [], evidence: [], commit: '' }
