@@ -8,6 +8,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -162,6 +163,71 @@ class SettingsTest(TempDataTest):
         self.assertEqual(cs.load_overrides(self.data), {"voice": "am_adam"})
         cs.save_overrides(self.data, {"voice": None, "speed": 1.5})
         self.assertEqual(cs.load_overrides(self.data), {"speed": 1.5})
+
+
+class SettingsDriftTest(unittest.TestCase):
+    """A setting lives in several places (CLAUDE.md, "Settings precedence"); fail when they drift.
+
+    It cannot tell that a new key was meant to be user-toggleable, so a key left out of
+    OVERRIDABLE passes. It checks that `config` accepts each flag, not how cmd_config handles it,
+    nor the per-call flags of with_voice() (US-031).
+    """
+
+    # The config flag for each overridable key is --<key-with-dashes>, except these.
+    FLAGS = {"auto_speak": "auto"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.user_config = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["userConfig"]
+        skill = (ROOT / "skills" / "speak-settings" / "SKILL.md").read_text()
+        # Only the command lines count: a flag named in prose alone would not reach the CLI.
+        cls.config_lines = "\n".join(line for line in skill.splitlines() if "claude-speak config" in line)
+        # The real parser, read through --help: main() uses parse_known_args, so a flag it lacks
+        # would be dropped without an error.
+        out = io.StringIO()
+        with mock.patch.object(sys, "argv", ["claude-speak", "config", "--help"]), \
+                contextlib.redirect_stdout(out), contextlib.suppress(SystemExit):
+            cs.main()
+        cls.config_help = out.getvalue()
+
+    def test_defaults_match_user_config(self):
+        self.assertEqual(set(cs.DEFAULTS), set(self.user_config),
+                         "add the setting to both DEFAULTS (scripts/claude_speak.py) and "
+                         "userConfig (.claude-plugin/plugin.json)")
+
+    def test_default_values_match(self):
+        for key in cs.DEFAULTS.keys() & self.user_config.keys():
+            with self.subTest(key=key):
+                ours, theirs = cs.DEFAULTS[key], self.user_config[key].get("default")
+                # True == 1 in Python, so a bool must stay a bool.
+                self.assertEqual((isinstance(ours, bool), ours), (isinstance(theirs, bool), theirs),
+                                 f"default of '{key}' differs: DEFAULTS {ours!r}, userConfig {theirs!r}")
+
+    def test_overridable_are_settings(self):
+        self.assertTrue(cs.OVERRIDABLE)
+        self.assertLessEqual(set(cs.OVERRIDABLE), set(cs.DEFAULTS),
+                             "every OVERRIDABLE key must be in DEFAULTS")
+
+    def test_skill_and_cli_set_overridable(self):
+        self.assertTrue(self.config_lines, "no 'claude-speak config' line in skills/speak-settings/SKILL.md")
+        self.assertIn("usage: claude-speak config", self.config_help)
+        self.assertLessEqual(set(self.FLAGS), set(cs.OVERRIDABLE), "stale key in FLAGS")
+        for key in cs.OVERRIDABLE:
+            flag = re.escape("--" + self.FLAGS.get(key, key).replace("_", "-")) + r"(?![\w-])"
+            with self.subTest(key=key):
+                self.assertTrue(re.search(flag, self.config_help), f"'claude-speak config' has no flag for '{key}'")
+                self.assertTrue(re.search(flag, self.config_lines),
+                                f"no 'claude-speak config' line in skills/speak-settings/SKILL.md "
+                                f"passes the flag for '{key}'")
+
+    def test_skill_passes_only_known_flags(self):
+        # The other direction: a flag only in the skill would be dropped without an error.
+        flags = set(re.findall(r"--[\w-]+", self.config_lines))
+        self.assertTrue(flags, "no flag on a 'claude-speak config' line in skills/speak-settings/SKILL.md")
+        for flag in flags:
+            with self.subTest(flag=flag):
+                self.assertTrue(re.search(re.escape(flag) + r"(?![\w-])", self.config_help),
+                                f"skills/speak-settings/SKILL.md passes {flag}, which 'claude-speak config' lacks")
 
 
 class SummaryCacheTest(TempDataTest):

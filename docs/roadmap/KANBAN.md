@@ -5,8 +5,6 @@ methodology: continuous-flow
 
 ## TODO
 
-- [ ] [[US-031-settings-drift-test]]
-
 - [ ] [[US-006-speak-permission-prompts-and-alert-the]]
 
 - [ ] [[US-009-verbosity-levels-and-skipping-trivial-replies]]
@@ -32,6 +30,8 @@ methodology: continuous-flow
 - [ ] [[US-016-personas]]
 
 ## DOING
+
+- [/] [[US-031-settings-drift-test]]
 
 ## DONE
 

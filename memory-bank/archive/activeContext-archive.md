@@ -57,3 +57,22 @@ moved verbatim. Not part of the session-start read; consult on demand.
   with the session id and touches `hush-<session>`, so a summary still being written is dropped.
 - **Learnings**: an empty state-file read is a half-done write, not idle (double stop on macOS CI).
   `gh pr create` in a fork targets upstream: always pass `--repo lucaschallamel/claude-speak`.
+
+## Session 2026-11-19/20: US-030 , restart a stale server after a plugin update
+
+- **Focus**: third story through the full `/cu:pipe` (standard profile), S0-S10, merged as PR #40 (5eaabfa), in the
+  Orca worktree `us-030-stale-server-restart`. Three fresh reviews (S4, S5, S7), one ponytail
+  review, and a real-hardware run with scratch plugin copies at five versions.
+- **Delivered**: both processes read `version` from `plugin.json`, and `/health` reports
+  `version` and `quitting`. The client replaces only an older server: it posts `/quit` under
+  `server.lock` and waits up to 120 s (gone = two health misses in a row). A quitting server
+  refuses `/speak`, `/replay`, `/warm` and `/synth` with 503, finishes its queue, and exits; after
+  `DRAIN_CAP` (100 s) it stops its speech and exits anyway. A 503 is retried once. On exit, the
+  socket is removed only if it is still the server's own. `status` shows both versions. 142 tests.
+- **Key decisions**: old servers (0.4.x) get no automatic kill; the 0.5.0 update block keeps
+  `pkill` once (Lucas, S1). Newer wins. Drain, then refuse. The 120 s wait drops one utterance
+  past it. Every review finding was mitigated at Lucas's request ("mitigate all").
+- **Learnings**: nest the bounds (server drain cap under client wait); fresh reviewers find race
+  windows the author misses; brief read-only reviewers with the exact forbidden git commands; the
+  worktree guard refuses git-like text in complex commands, so use Write/Edit or script files.
+- **Journal**: [2026-11-20-us-030-stale-server-restart](../docs/dev-journal/2026/11/2026-11-20-us-030-stale-server-restart.md)

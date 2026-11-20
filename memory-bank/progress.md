@@ -15,7 +15,9 @@
 - Merged to main (US-030, PR #40, 2026-11-20): a plugin update takes
   effect on the next utterance. The old server drains and exits, then the new one starts; only an
   older server is replaced. Reaches installs with 0.5.0.
-- 142 unit tests (9 need numpy: CI runs them on the 3.13 jobs, the 3.10 jobs skip them), CI on
+- On branch (US-031, PR at S10): `SettingsDriftTest` fails when a setting is missing from one of
+  its places, a default differs, or a skill flag and the `config` parser disagree.
+- 147 unit tests (9 need numpy: CI runs them on the 3.13 jobs, the 3.10 jobs skip them), CI on
   Linux and macOS.
 
 ## Milestones
@@ -35,6 +37,12 @@
   status line can pass 2.5 s (Kokoro synthesis slows); met on a quiet machine (US-005 decision 23).
 
 ## Decision log
+
+- 2026-11-20 (US-031): the drift test maps key to `config` flag (`auto_speak` -> `--auto`)
+  instead of editing the skill; default values are compared; the real parser is read through
+  `config --help`, because `parse_known_args` drops unknown flags silently (S5, S7); not covered:
+  how `cmd_config` handles a flag, and `with_voice()` flags. Upstream in the later batch, no
+  version bump. Every S4, S5, S7 and ponytail finding mitigated (Lucas).
 
 - 2026-11-20 (grilling after US-030): release stays per milestone (0.5.0 at the end of
   milestone 3, with `pkill` once in its update block). A feature PR's merge approval also covers
@@ -71,3 +79,4 @@
 - 2026-11-14: trust-boundary list and workflow decisions on main (PR #25).
 - 2026-11-14/15: US-005 priority lanes through S0-S8 on its branch.
 - 2026-11-19/20: US-030 stale-server restart delivered through the full pipeline (PR #40, 5eaabfa).
+- 2026-11-20: US-031 settings drift test through S0-S8 on its branch.
