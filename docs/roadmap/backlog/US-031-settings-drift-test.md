@@ -22,6 +22,7 @@ github_issue: 31
 > - **2026-11-20**: [S4-S6] Fresh reviews S4 and S5 PASS, every finding mitigated (skill check limited to `config` lines, real `config` parser checked through `--help`); quality gates all pass (146 tests, Python 3.10, ruff, validators).
 > - **2026-11-20**: [S7_CRITICAL_REVIEW] Fresh DoD review PASS; the AC1 WARN (a flag only in the skill passed) fixed with a skill-to-parser check; 147 tests.
 > - **2026-11-20**: [S8_CAPTURE] Dev journal, memory bank and README review captured.
+> - **2026-11-20**: [S9_CLOSE] Close documentation committed; status stays In Progress until the merge (Done and card DONE in the close PR).
 
 # US-031: Settings drift test
 

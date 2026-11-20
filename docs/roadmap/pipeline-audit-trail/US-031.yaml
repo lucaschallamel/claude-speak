@@ -12,7 +12,7 @@ change_surface:
   architecture: false
   security_sensitive: false
   compliance_sensitive: false
-current_stage: S9_CLOSE
+current_stage: S10_MERGE
 status: active
 status_reason: ''
 initiated_at: '2026-11-20T07:51:44Z'
@@ -143,8 +143,16 @@ stages:
       - 'prune-memory-bank.py: US-030 session block rolled to archive/activeContext-archive.md (appended before removal); --check exit 0 (budget table not readable here, sizes not checked)'
       - 'check-memory-bank-consistency.py: exit 2 at the default docs roots (fail closed); with COPPER_DOCS_ROOT=. PASS, exit 0 (no Framework counts line)'
       - '/cu:readme-update: 3 READMEs reviewed (README.md, docs/dev-journal/README.md, docs/roadmap/README.md), none missing; nothing to update (Lucas: no change; the settings rule lives in CLAUDE.md, zero upstream README diff)'
+    commit: 'b8739da, 3175ac4'
+  S9_CLOSE:
+    status: completed
+    completed_at: '2026-11-20T09:25:34Z'
+    evidence:
+      - '/cu:story-update: S9 progress entry added; frontmatter status stays In Progress, last_modified 2026-11-20 (TD-173: Done at the merge)'
+      - '/cu:readme-update: re-checked after S8, no README-affecting change since; nothing to update'
+      - 'Close docs committed with message docs(US-031): S9 close documentation'
+      - 'Closure checklist 3-8: journal exists, memory bank updated, readme-update ran, DoD verified (S7), verified_claims recorded (7, S6); items 1, 2, 9-11 belong to S10'
     commit: ''
-  S9_CLOSE: { status: pending, completed_at: '', evidence: [], commit: '' }
   S10_MERGE: { status: pending, completed_at: '', evidence: [], commit: '' }
 closure_checks:
   backlog_status: { status: pending, reason: '' }
@@ -152,10 +160,10 @@ closure_checks:
   dev_journal: { status: pass, reason: 'docs/dev-journal/2026/11/2026-11-20-us-031-settings-drift-test.md' }
   memory_bank: { status: pass, reason: 'activeContext.md, progress.md, systemPatterns.md, techContext.md updated; US-030 block archived; consistency PASS with COPPER_DOCS_ROOT=.' }
   readme_review: { status: pass, reason: '/cu:readme-update ran: 3 READMEs reviewed, nothing to update (Lucas)' }
-  commit_evidence: { status: pending, reason: '' }
+  commit_evidence: { status: pass, reason: 'Checkpoint commits S1 6049388, S3 ef86733, S6 f508f67, S9 close docs; review fixes 081dc78, 4d7ff68, 71c1e3d' }
   pr_readiness: { status: pending, reason: '' }
   pr_creation: { status: pending, reason: 'Created at S10 after all close docs committed and pushed' }
-  deliverables_resolved: { status: pending, reason: '' }
+  deliverables_resolved: { status: pass, reason: 'AC1 met (S3, S7); every S4, S5, S7 and ponytail finding mitigated or accepted with reason' }
   dod_verified: { status: pass, reason: 'S7 fresh /cu:dod-verify PASS; AC1d WARN fixed after S7' }
 quality_gates:
   lint:
