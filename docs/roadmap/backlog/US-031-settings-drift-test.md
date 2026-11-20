@@ -51,3 +51,11 @@ Effort: XS. Could go upstream: yes.
 - Default values are compared too, not only keys (Lucas).
 - Not covered: the hand-written key lists in `cmd_config` and the per-call flags in `with_voice()`. A key that is deliberately absent from `userConfig` would need an explicit exception, decided in the story that adds it.
 - Points stay at 1.
+
+## Decisions (after S3, 2026-11-20, Lucas)
+
+- Branch pushed after the S3 checkpoint; no PR until S10.
+- Three fresh-context reviews (S4, S5, S7), as the pipeline requires.
+- S5 records the trust-boundary line: no trust-boundary path is touched (test-only change).
+- The `cmd_config` and `with_voice()` gap stays a note here; no issue filed. US-009 and US-032 touch `cmd_config` anyway.
+- Upstream: in the later batch with US-030 and the Quiet features. No version bump: no release.
